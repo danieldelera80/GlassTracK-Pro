@@ -1,0 +1,30 @@
+INSTRUCCIONES - Descargar Python para el pendrive
+==================================================
+
+Para que el sistema funcione sin internet en la PC del cliente,
+necesitas descargar el instalador de Python y ponerlo en esta carpeta.
+
+PASOS:
+------
+
+1. Ir a: https://www.python.org/downloads/
+
+2. Descargar la version mas reciente de Python 3
+   (boton amarillo grande que dice "Download Python 3.X.X")
+
+3. Renombrar el archivo descargado a:
+   python-installer.exe
+
+4. Copiar ese archivo en ESTA carpeta:
+   _python_installer\python-installer.exe
+
+5. Listo. El instalar.bat lo usara automaticamente
+   si la PC del cliente no tiene Python.
+
+
+NOTA IMPORTANTE para el cliente durante la instalacion:
+-------------------------------------------------------
+Cuando se abra el instalador de Python, tildar la opcion:
+"Add Python to PATH"  (abajo de todo en la primera pantalla)
+
+Sin esa opcion el sistema no va a funcionar.

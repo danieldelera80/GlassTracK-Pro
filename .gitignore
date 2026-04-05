@@ -1,0 +1,32 @@
+# Base de datos — datos reales del cliente, nunca al repo
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Streamlit — archivos locales
+.streamlit/secrets.toml
+.streamlit/cert.pem
+.streamlit/key.pem
+.streamlit/config.toml
+
+# Paquetes offline del pendrive — pesan mucho y son locales
+_paquetes_offline/
+
+# Instalador de Python — pesa mucho, se descarga de python.org
+_python_installer/*.exe
+_python_installer/*.msi
+_python_installer/*.msix
+
+# OS
+.DS_Store
+Thumbs.db
+Thumbs.db:encryptable
+desktop.ini

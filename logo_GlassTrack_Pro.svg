@@ -1,0 +1,46 @@
+<svg width="500" height="160" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Hexágono fondo -->
+  <polygon points="48,6 90,6 111,42 90,78 48,78 27,42" fill="#1A3A6B"/>
+  <!-- Hexágono borde interno -->
+  <polygon points="52,12 86,12 104,42 86,72 52,72 34,42" fill="none" stroke="#4A90D9" stroke-width="1.2"/>
+
+  <!-- Panel de vidrio (rombo) -->
+  <polygon points="69,18 92,42 69,66 46,42" fill="#4A90D9" fill-opacity="0.25" stroke="#4A90D9" stroke-width="1.5"/>
+  <!-- Cruces del marco de vidrio -->
+  <line x1="69" y1="18" x2="69" y2="66" stroke="#4A90D9" stroke-width="1"/>
+  <line x1="46" y1="42" x2="92" y2="42" stroke="#4A90D9" stroke-width="1"/>
+  <!-- Brillo -->
+  <line x1="52" y1="28" x2="62" y2="24" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+
+  <!-- Punto de tracking -->
+  <circle cx="69" cy="42" r="4" fill="#4A90D9"/>
+  <circle cx="69" cy="42" r="7" fill="none" stroke="#4A90D9" stroke-width="0.8" stroke-opacity="0.5"/>
+
+  <!-- Nombre -->
+  <text x="120" y="52" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="42" fill="#1A3A6B">Glass</text>
+  <text x="256" y="52" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="42" fill="#4A90D9">Track</text>
+  <text x="392" y="52" font-family="Arial, Helvetica, sans-serif" font-weight="300" font-size="42" fill="#1A3A6B"> Pro</text>
+
+  <!-- Línea divisora -->
+  <line x1="120" y1="62" x2="490" y2="62" stroke="#4A90D9" stroke-width="1.5"/>
+
+  <!-- Subtítulo -->
+  <text x="120" y="82" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="13" fill="#6B8AB5" letter-spacing="3">SISTEMA DE CONTROL DE PRODUCCIÓN</text>
+
+  <!-- Línea inferior -->
+  <line x1="27" y1="100" x2="490" y2="100" stroke="#E8EEF5" stroke-width="0.8"/>
+
+  <!-- Tags -->
+  <rect x="27"  y="112" width="90" height="24" rx="5" fill="#EBF3FF"/>
+  <text x="72"  y="128" font-family="Arial" font-size="10" fill="#4A90D9" text-anchor="middle" font-weight="700">Escaneo</text>
+  <rect x="130" y="112" width="90" height="24" rx="5" fill="#EBF3FF"/>
+  <text x="175" y="128" font-family="Arial" font-size="10" fill="#4A90D9" text-anchor="middle" font-weight="700">Monitor Live</text>
+  <rect x="233" y="112" width="90" height="24" rx="5" fill="#EBF3FF"/>
+  <text x="278" y="128" font-family="Arial" font-size="10" fill="#4A90D9" text-anchor="middle" font-weight="700">Red Local</text>
+  <rect x="336" y="112" width="90" height="24" rx="5" fill="#EBF3FF"/>
+  <text x="381" y="128" font-family="Arial" font-size="10" fill="#4A90D9" text-anchor="middle" font-weight="700">Datos Seguros</text>
+
+  <!-- Contacto -->
+  <text x="258" y="152" font-family="Arial" font-size="10" fill="#B8CCDE" text-anchor="middle">Support IT — Daniel De Lera  ·  +54 9 3624210356</text>
+</svg>

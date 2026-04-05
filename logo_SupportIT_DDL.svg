@@ -1,0 +1,113 @@
+<svg width="680" height="300" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+<style>.mono{font-family:'Courier New',monospace}</style>
+<rect width="680" height="300" rx="10" fill="#080d18"/>
+<defs>
+  <pattern id="g" width="22" height="22" patternUnits="userSpaceOnUse">
+    <path d="M22 0L0 0 0 22" fill="none" stroke="#101828" stroke-width="0.6"/>
+  </pattern>
+</defs>
+<rect width="680" height="300" rx="10" fill="url(#g)"/>
+<g stroke="#162038" stroke-width="1.2" fill="none">
+  <polyline points="15,50 40,50 40,80 68,80"/>
+  <circle cx="68" cy="80" r="2.5" fill="#162038" stroke="none"/>
+  <polyline points="15,110 35,110 35,145 62,145 62,175 80,175"/>
+  <circle cx="80" cy="175" r="2.5" fill="#162038" stroke="none"/>
+  <polyline points="15,210 42,210 42,240 70,240"/>
+  <circle cx="70" cy="240" r="2.5" fill="#162038" stroke="none"/>
+  <polyline points="665,50 640,50 640,80 612,80"/>
+  <circle cx="612" cy="80" r="2.5" fill="#162038" stroke="none"/>
+  <polyline points="665,115 645,115 645,148 618,148 618,178 600,178"/>
+  <circle cx="600" cy="178" r="2.5" fill="#162038" stroke="none"/>
+  <polyline points="665,215 638,215 638,245 610,245"/>
+  <circle cx="610" cy="245" r="2.5" fill="#162038" stroke="none"/>
+</g>
+<text x="12" y="44"  class="mono" font-size="7.5" fill="#0f2040">01001000</text>
+<text x="12" y="96"  class="mono" font-size="7.5" fill="#0f2040">11010011</text>
+<text x="12" y="166" class="mono" font-size="7.5" fill="#0f2040">10110100</text>
+<text x="12" y="256" class="mono" font-size="7.5" fill="#0f2040">00101110</text>
+<text x="596" y="44"  class="mono" font-size="7.5" fill="#0f2040">10011010</text>
+<text x="596" y="100" class="mono" font-size="7.5" fill="#0f2040">01110001</text>
+<text x="596" y="172" class="mono" font-size="7.5" fill="#0f2040">11001011</text>
+<text x="596" y="258" class="mono" font-size="7.5" fill="#0f2040">10100011</text>
+<text x="105" y="38" class="mono" font-size="10" fill="#2a5fa0" opacity="0.8">root@DDL:~$</text>
+<text x="195" y="38" class="mono" font-size="10" fill="#3a7bd5" opacity="0.8">init --profile="tech" --scope=full</text>
+<text x="105" y="52" class="mono" font-size="8.5" fill="#28a745" opacity="0.7">[OK] Electronics · Microelectronics · Programming · Software Dev · IoT</text>
+<rect x="98" y="60" width="484" height="178" rx="4" fill="#0c1422" stroke="#1a3060" stroke-width="1"/>
+<rect x="98" y="60" width="484" height="20" rx="4" fill="#152035"/>
+<rect x="98" y="72" width="484" height="8" fill="#152035"/>
+<circle cx="114" cy="70" r="4.5" fill="#ff5f57"/>
+<circle cx="130" cy="70" r="4.5" fill="#febc2e"/>
+<circle cx="146" cy="70" r="4.5" fill="#28c840"/>
+<text x="162" y="74" class="mono" font-size="7" fill="#2a4a70">ddl_support_it.exe  —  Daniel De Lera</text>
+<path d="M118,92 L148,92 L162,106 L162,148 L148,162 L118,162 L118,153 L145,153 L155,143 L155,111 L145,101 L118,101 Z" fill="#3a7bd5"/>
+<circle cx="133" cy="88" r="2.5" fill="#4a9eff"/>
+<circle cx="148" cy="88" r="2.5" fill="#4a9eff"/>
+<line x1="133" y1="88" x2="148" y2="88" stroke="#4a9eff" stroke-width="1"/>
+<circle cx="166" cy="112" r="2.5" fill="#4a9eff"/>
+<circle cx="166" cy="132" r="2.5" fill="#4a9eff"/>
+<line x1="166" y1="112" x2="166" y2="132" stroke="#4a9eff" stroke-width="1"/>
+<path d="M176,92 L206,92 L220,106 L220,148 L206,162 L176,162 L176,153 L203,153 L213,143 L213,111 L203,101 L176,101 Z" fill="#3a7bd5"/>
+<circle cx="191" cy="88" r="2.5" fill="#4a9eff"/>
+<circle cx="206" cy="88" r="2.5" fill="#4a9eff"/>
+<line x1="191" y1="88" x2="206" y2="88" stroke="#4a9eff" stroke-width="1"/>
+<circle cx="224" cy="118" r="2.5" fill="#4a9eff"/>
+<circle cx="224" cy="142" r="2.5" fill="#4a9eff"/>
+<line x1="224" y1="118" x2="224" y2="142" stroke="#4a9eff" stroke-width="1"/>
+<rect x="234" y="92"  width="10" height="70" fill="#3a7bd5"/>
+<rect x="234" y="153" width="46" height="9"  fill="#3a7bd5"/>
+<circle cx="248" cy="88" r="2.5" fill="#4a9eff"/>
+<circle cx="262" cy="88" r="2.5" fill="#4a9eff"/>
+<line x1="248" y1="88" x2="262" y2="88" stroke="#4a9eff" stroke-width="1"/>
+<circle cx="282" cy="166" r="2.5" fill="#4a9eff"/>
+<circle cx="296" cy="166" r="2.5" fill="#4a9eff"/>
+<line x1="282" y1="166" x2="296" y2="166" stroke="#4a9eff" stroke-width="1"/>
+<line x1="298" y1="80" x2="298" y2="232" stroke="#1a3a60" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="310" y="102" class="mono" font-size="8.5" fill="#4a9eff">// Daniel De Lera</text>
+<text x="310" y="118" class="mono" font-size="18" fill="#ddeeff" font-weight="bold">Support IT</text>
+<text x="310" y="134" class="mono" font-size="8" fill="#2a5fa0">&lt;fullstack_engineer /&gt;</text>
+<rect x="310" y="142" width="56" height="15" rx="2" fill="#0d2040" stroke="#e67e22" stroke-width="0.8"/>
+<text x="338" y="152" class="mono" font-size="7" fill="#e67e22" text-anchor="middle">Electronica</text>
+<rect x="370" y="142" width="72" height="15" rx="2" fill="#0d2040" stroke="#e67e22" stroke-width="0.8"/>
+<text x="406" y="152" class="mono" font-size="7" fill="#e67e22" text-anchor="middle">Microelectronica</text>
+<rect x="446" y="142" width="52" height="15" rx="2" fill="#0d2040" stroke="#e67e22" stroke-width="0.8"/>
+<text x="472" y="152" class="mono" font-size="7" fill="#e67e22" text-anchor="middle">Arduino/ESP</text>
+<rect x="310" y="161" width="46" height="15" rx="2" fill="#0d2040" stroke="#3a7bd5" stroke-width="0.8"/>
+<text x="333" y="171" class="mono" font-size="7" fill="#4a9eff" text-anchor="middle">Python</text>
+<rect x="360" y="161" width="50" height="15" rx="2" fill="#0d2040" stroke="#3a7bd5" stroke-width="0.8"/>
+<text x="385" y="171" class="mono" font-size="7" fill="#4a9eff" text-anchor="middle">Streamlit</text>
+<rect x="414" y="161" width="42" height="15" rx="2" fill="#0d2040" stroke="#3a7bd5" stroke-width="0.8"/>
+<text x="435" y="171" class="mono" font-size="7" fill="#4a9eff" text-anchor="middle">SQLite</text>
+<rect x="460" y="161" width="38" height="15" rx="2" fill="#0d2040" stroke="#3a7bd5" stroke-width="0.8"/>
+<text x="479" y="171" class="mono" font-size="7" fill="#4a9eff" text-anchor="middle">Linux</text>
+<rect x="310" y="180" width="38" height="15" rx="2" fill="#0d2040" stroke="#28a745" stroke-width="0.8"/>
+<text x="329" y="190" class="mono" font-size="7" fill="#28c840" text-anchor="middle">WiFi</text>
+<rect x="352" y="180" width="38" height="15" rx="2" fill="#0d2040" stroke="#28a745" stroke-width="0.8"/>
+<text x="371" y="190" class="mono" font-size="7" fill="#28c840" text-anchor="middle">IoT</text>
+<rect x="394" y="180" width="46" height="15" rx="2" fill="#0d2040" stroke="#28a745" stroke-width="0.8"/>
+<text x="417" y="190" class="mono" font-size="7" fill="#28c840" text-anchor="middle">Networks</text>
+<rect x="444" y="180" width="56" height="15" rx="2" fill="#0d2040" stroke="#28a745" stroke-width="0.8"/>
+<text x="472" y="190" class="mono" font-size="7" fill="#28c840" text-anchor="middle">3D Print</text>
+<text x="106" y="228" class="mono" font-size="8" fill="#28a745">&gt; status:</text>
+<text x="158" y="228" class="mono" font-size="8" fill="#4dff91">ONLINE</text>
+<text x="205" y="228" class="mono" font-size="8" fill="#1e4a80">|</text>
+<text x="213" y="228" class="mono" font-size="8" fill="#2a5f90">uptime: 24/7</text>
+<text x="305" y="228" class="mono" font-size="8" fill="#1e4a80">|</text>
+<text x="313" y="228" class="mono" font-size="8" fill="#2a5f90">Chaco, Argentina</text>
+<text x="455" y="228" class="mono" font-size="8" fill="#1e4a80">|</text>
+<text x="463" y="228" class="mono" font-size="8" fill="#2a5f90">ping: 0ms</text>
+<rect x="536" y="219" width="5" height="10" fill="#4a9eff" opacity="0.7"/>
+<rect x="95"  y="57"  width="490" height="184" rx="6" fill="none" stroke="#162840" stroke-width="1.5"/>
+<g stroke="#2a5fa0" stroke-width="1.5" fill="none">
+  <polyline points="82,57 82,44 95,44"/>
+  <polyline points="590,57 590,44 577,44"/>
+  <polyline points="82,241 82,254 95,254"/>
+  <polyline points="590,241 590,254 577,254"/>
+</g>
+<text x="88" y="42"  class="mono" font-size="7.5" fill="#162840">0xDDL</text>
+<text x="528" y="42" class="mono" font-size="7.5" fill="#162840">v2.0.26</text>
+<text x="88" y="268" class="mono" font-size="7.5" fill="#162840">&lt;/DDL&gt;</text>
+<text x="536" y="268" class="mono" font-size="7.5" fill="#162840">EOF</text>
+<line x1="98" y1="256" x2="582" y2="256" stroke="#162038" stroke-width="0.8"/>
+<text x="340" y="272" class="mono" font-size="9" fill="#2a4a6a" text-anchor="middle">+54 9 3624210356  ·  Chaco, Argentina</text>
+<text x="340" y="285" class="mono" font-size="8" fill="#162038" text-anchor="middle">Electronica  ·  Microelectronica  ·  Programacion  ·  Desarrollo de Software</text>
+</svg>
