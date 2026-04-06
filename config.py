@@ -10,8 +10,24 @@ from pathlib import Path
 #  🔒 CONTROL DE LICENCIA — editá solo esta sección
 # ══════════════════════════════════════════════════════════════════════════════
 
-BLOQUEADO: bool = False
+# ── Identificador único de este cliente ───────────────────────────────────────
+# Cada instalación tiene su propio archivo JSON en el repo de licencias.
+# Cambiá este valor por el nombre del cliente cuando instalés en una PC nueva.
+CLIENTE_ID: str = "contacto-sa"
+
+# ── URL del archivo de licencia en GitHub ─────────────────────────────────────
+# Apunta al repo privado "licencias" donde controlás todos los clientes.
+LICENCIA_URL: str = (
+    f"https://raw.githubusercontent.com/danieldelera80/"
+    f"licencias/main/{CLIENTE_ID}.json"
+)
+
+# ── Respaldo local (se usa si no hay internet) ────────────────────────────────
+# Si el sistema no puede consultar GitHub, usa esta fecha como límite.
+# Actualizala cada vez que el cliente paga, junto con el JSON online.
 FECHA_LIMITE: datetime = datetime(2026, 12, 31)
+
+# ── Datos de contacto ─────────────────────────────────────────────────────────
 CONTACTO_SOPORTE: str = "Daniel De Lera"
 CONTACTO_TEL:     str = "+54 9 3624210356"
 
@@ -22,7 +38,6 @@ CONTACTO_TEL:     str = "+54 9 3624210356"
 BASE_DIR = Path(__file__).parent
 DB_PATH  = BASE_DIR / "produccion.db"
 
-# Sectores de producción (sin Entrega — se maneja aparte)
 SECTORES = [
     "Corte",
     "Corte Laminado",
@@ -31,10 +46,9 @@ SECTORES = [
     "DVH",
     "Laminado",
     "Templado",
-    "Entrega",          # ← sector especial: solo escaneo, sin carro ni lado
+    "Entrega",
 ]
 
-# Sectores que muestran carro + lado en el formulario
 SECTORES_PRODUCCION = [s for s in SECTORES if s != "Entrega"]
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -69,6 +83,7 @@ body, .main { background-color: #0a0a0f !important; }
 """
 
 def _mostrar_pantalla_error() -> None:
+    """Muestra la pantalla de error 404 y detiene la ejecucion."""
     st.markdown(_CSS_ERROR, unsafe_allow_html=True)
     st.markdown(f"""
     <div class="error-wrap">
@@ -94,9 +109,63 @@ def _mostrar_pantalla_error() -> None:
     st.stop()
 
 
+def _consultar_licencia_online() -> bool | None:
+    """
+    Consulta el JSON de licencia en GitHub.
+    Retorna:
+        True  → licencia activa
+        False → licencia bloqueada
+        None  → sin internet o error (usar respaldo local)
+    """
+    try:
+        import urllib.request
+        import json
+
+        req = urllib.request.Request(
+            LICENCIA_URL,
+            headers={"User-Agent": "GlassTrack/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            data = json.loads(resp.read().decode())
+
+        # Verificar si está activo
+        if not data.get("activo", True):
+            return False
+
+        # Verificar fecha de vencimiento del JSON
+        vence_str = data.get("vence", "")
+        if vence_str:
+            vence = datetime.strptime(vence_str, "%Y-%m-%d")
+            if datetime.now() > vence:
+                return False
+
+        return True
+
+    except Exception:
+        # Sin internet o cualquier error → devuelve None (usar respaldo)
+        return None
+
+
 def verificar_licencia() -> None:
-    if BLOQUEADO or datetime.now() > FECHA_LIMITE:
+    """
+    Sistema de licencia en dos capas:
+      Capa 1 — Consulta GitHub (online): lee el JSON del cliente.
+               Si está bloqueado o vencido → pantalla de error.
+      Capa 2 — Respaldo local (offline):  si no hay internet,
+               usa FECHA_LIMITE del config.py como fallback.
+    """
+    estado = _consultar_licencia_online()
+
+    if estado is False:
+        # GitHub dice bloqueado → mostrar error
         _mostrar_pantalla_error()
+
+    elif estado is None:
+        # Sin internet → usar respaldo local
+        if datetime.now() > FECHA_LIMITE:
+            _mostrar_pantalla_error()
+
+    # estado is True → licencia activa → continuar normalmente
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -104,6 +173,7 @@ def verificar_licencia() -> None:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def init_db() -> None:
+    """Crea la tabla registros si no existe."""
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS registros (
