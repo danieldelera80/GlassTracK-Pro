@@ -5,6 +5,22 @@ Importar con: from styles import CSS_GLOBAL, sidebar_html
 
 CSS_GLOBAL = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+/* ── Fuente Moderna Global ── */
+html, body, [class*="css"] {
+    font-family: 'Outfit', sans-serif !important;
+}
+
+/* ── Animaciones ── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+[data-testid="stVerticalBlock"] > div {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
 
 /* ── Ocultar navegación automática de Streamlit ── */
 [data-testid="stSidebarNav"] { display: none !important; }
@@ -21,48 +37,77 @@ CSS_GLOBAL = """
 /* ── Header del sidebar ── */
 .sb-header {
     background: linear-gradient(135deg, #1a3a6b 0%, #0d1f3c 100%);
-    padding: 20px 16px 16px;
+    padding: 24px 16px 20px;
     margin: -1rem -1rem 20px;
-    border-bottom: 1px solid #2a4a7a;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
     text-align: center;
 }
-.sb-logo { font-size: 32px; margin-bottom: 4px; }
+.sb-logo { font-size: 38px; margin-bottom: 8px; transition: transform 0.3s; }
+.sb-header:hover .sb-logo { transform: rotate(10deg) scale(1.1); }
 .sb-empresa {
-    font-size: 13px; font-weight: 800; color: #4a90d9;
+    font-size: 14px; font-weight: 800; color: #60a5fa;
     letter-spacing: 2px; text-transform: uppercase;
 }
-.sb-sistema { font-size: 11px; color: #5a7a9a; margin-top: 2px; }
+.sb-sistema { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 
 /* ── Tarjeta de operario en sidebar ── */
 .sb-op-card {
-    background: #0d1f3c;
-    border: 1px solid #1e3a6a;
-    border-radius: 10px;
-    padding: 12px 14px;
+    background: rgba(13, 31, 60, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(74, 144, 217, 0.2);
+    border-radius: 12px;
+    padding: 14px;
     margin-bottom: 12px;
+    transition: background 0.3s;
 }
-.sb-op-label { font-size: 10px; color: #4a6a9a; text-transform: uppercase;
+.sb-op-card:hover { background: rgba(13, 31, 60, 0.9); }
+.sb-op-label { font-size: 10px; color: #60a5fa; text-transform: uppercase;
                letter-spacing: 1.5px; margin-bottom: 4px; }
-.sb-op-name  { font-size: 16px; font-weight: 700; color: #e0e8f5; }
+.sb-op-name  { font-size: 16px; font-weight: 700; color: #f8fafc; }
 .sb-op-sector {
-    font-size: 12px; color: #4a90d9; margin-top: 3px;
+    font-size: 12px; color: #93c5fd; margin-top: 4px;
     display: flex; align-items: center; gap: 4px;
 }
 
-/* ── Botones del sidebar ── */
-.sb-btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-
 /* ── Estilos globales de botones ── */
 .stButton > button {
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     font-weight: 600 !important;
     font-size: 15px !important;
-    height: 3.2em !important;
-    transition: all 0.2s !important;
+    min-height: 3.2em !important;
+    height: auto !important;
+    padding: 0.5em 1em !important;
+    background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+    border: 1px solid #334155 !important;
+    color: #e2e8f0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 .stButton > button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(74,144,217,0.3) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3) !important;
+    border-color: #3b82f6 !important;
+}
+
+/* Boton Primario sobreescritura */
+[data-testid="stButton"] button[kind="primary"] {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important;
+}
+[data-testid="stButton"] button[kind="primary"]:hover {
+    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* Campos de texto */
+div[data-baseweb="input"] {
+    border-radius: 12px !important;
+    background-color: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid #475569 !important;
+}
+div[data-baseweb="input"]:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
 }
 
 /* ── Barra de pasos ── */
@@ -72,7 +117,7 @@ CSS_GLOBAL = """
 }
 .steps-bar::before {
     content: ''; position: absolute; top: 18px; left: 10%; right: 10%;
-    height: 3px; background: #1e2a3a; z-index: 0;
+    height: 3px; background: #1e293b; z-index: 0;
 }
 .step-item {
     display: flex; flex-direction: column; align-items: center;
@@ -81,56 +126,62 @@ CSS_GLOBAL = """
 .step-circle {
     width: 38px; height: 38px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px; border: 2px solid #1e2a3a;
-    background: #0d1117; color: #3a4a5a;
+    font-weight: 700; font-size: 14px; border: 2px solid #334155;
+    background: #0f172a; color: #64748b;
+    transition: all 0.3s ease;
 }
-.step-circle.done   { background: #1a4a2e; border-color: #2a8a45; color: #4ada75; }
-.step-circle.active { background: #1a3a6b; border-color: #4a90d9; color: #90c0ff; }
-.step-label { font-size: 11px; color: #3a4a5a; margin-top: 5px; text-align: center; }
-.step-label.active  { color: #4a90d9; font-weight: 700; }
-.step-label.done    { color: #2a8a45; }
+.step-circle.done   { background: #064e3b; border-color: #059669; color: #34d399; }
+.step-circle.active { background: #1e3a8a; border-color: #3b82f6; color: #bfdbfe; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+.step-label { font-size: 12px; color: #64748b; margin-top: 6px; text-align: center; }
+.step-label.active  { color: #60a5fa; font-weight: 700; }
+.step-label.done    { color: #059669; }
 
-/* ── Barra de contexto operario/sector ── */
-.ctx-bar {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; background: #0d1f3c;
-    border-radius: 10px; margin-bottom: 20px;
-    border: 1px solid #1e3a6a;
+/* ── Glassmorphism Custom Metric Cards ── */
+.glass-metric {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+    margin-bottom: 16px;
 }
-.ctx-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #1a3a6b, #0d1f3c);
-    border: 2px solid #4a90d9;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
+.glass-metric:hover {
+    transform: translateY(-4px);
+    border-color: rgba(59, 130, 246, 0.5);
 }
-.ctx-info { flex: 1; min-width: 0; }
-.ctx-name  { font-size: 14px; font-weight: 700; color: #e0e8f5;
-             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ctx-sector { font-size: 12px; color: #4a90d9; }
-
-/* ── Aviso duplicado ── */
-.dup-box {
-    padding: 16px; background: #1a0808;
-    border: 1px solid #6a2020; border-radius: 12px;
-    color: #ff8a8a; text-align: center; margin-bottom: 16px;
-    font-size: 15px;
+.glass-title {
+    font-size: 13px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+.glass-value {
+    font-size: 46px;
+    font-weight: 800;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.glass-value.green {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 /* ── Panel de éxito ── */
 .success-panel {
     padding: 28px 20px; margin: 16px 0;
-    background: linear-gradient(135deg, #001a10, #002b1b);
-    border: 1px solid #2a8a45; border-radius: 16px;
-    color: #d4edda; text-align: center;
-    box-shadow: 0 0 30px rgba(40,160,70,.15);
-}
-
-/* ── Footer sidebar ── */
-.sb-footer {
-    position: absolute; bottom: 16px; left: 0; right: 0;
-    text-align: center; font-size: 10px; color: #1e2a3a;
-    padding: 0 16px;
+    background: linear-gradient(135deg, rgba(6,78,59,0.8), rgba(2,44,34,0.8));
+    backdrop-filter: blur(8px);
+    border: 1px solid #059669; border-radius: 16px;
+    color: #a7f3d0; text-align: center;
+    box-shadow: 0 0 30px rgba(16,185,129,0.2);
 }
 
 </style>

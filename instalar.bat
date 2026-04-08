@@ -62,7 +62,7 @@ if exist "%PAQUETES_DIR%" (
         --quiet
 ) else (
     echo  Instalando desde internet...
-    pip install streamlit pandas plotly openpyxl pyzbar Pillow streamlit-autorefresh cryptography ^
+    pip install streamlit pandas plotly openpyxl Pillow streamlit-autorefresh sqlalchemy psycopg2-binary zxingcpp ^
         --quiet
 )
 

@@ -9,15 +9,32 @@ st.set_page_config(
 )
 
 verificar_licencia()
-init_db()
+
+try:
+    init_db()
+except Exception as e:
+    st.error("⚠️ Error crítico: No se pudo conectar a la base de datos en la nube.")
+    st.info("Revisá tu conexión a internet o el archivo secrets.toml")
+    st.stop()
 
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)
+
 
 with st.sidebar:
     render_sb_header()
     st.caption("Seleccioná una sección para comenzar.")
     st.markdown('<div style="margin-top:8px;color:#2a3a4a;font-size:11px;text-align:center;">v1.0 · Fabrica Produccion</div>', unsafe_allow_html=True)
-
+# --- ACÁ AGREGAMOS TU ACCESO ADMIN ---
+    st.divider()
+    with st.expander("🔐 Panel de Control"):
+        clave = st.text_input("Llave Maestra", type="password")
+        es_admin = (clave == "admin123")
+        
+        if es_admin:
+            st.success("Acceso Admin habilitado")
+            st.session_state["is_admin"] = True
+        else:
+            st.session_state["is_admin"] = False
 st.markdown("""
 <div style="text-align:center; padding: 20px 0 10px;">
     <div style="font-size:52px;">🏭</div>

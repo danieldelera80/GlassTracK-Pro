@@ -2,6 +2,7 @@ streamlit
 pandas
 plotly
 openpyxl
-pyzbar
 Pillow
 streamlit-autorefresh
+sqlalchemy
+psycopg2-binary
