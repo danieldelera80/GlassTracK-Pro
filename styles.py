@@ -12,6 +12,16 @@ html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
+/* ── Ocultar "Manage app" y toolbar de Streamlit Cloud ── */
+[data-testid="stToolbar"],
+[data-testid="manage-app-button"],
+.stDeployButton,
+#MainMenu,
+footer {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 /* ── Animaciones ── */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(15px); }
