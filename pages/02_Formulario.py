@@ -19,10 +19,8 @@ st.markdown(
     header {visibility: hidden;}
     footer {visibility: hidden;}
     .stAppDeployButton {display:none;}
+    [data-testid="stStatusWidget"] {display:none;}
     [data-testid="stToolbar"] {visibility: hidden !important;}
-    [data-testid="stDecoration"] {display:none;}
-    /* Esto quita el menú de 'Manage app' abajo a la derecha */
-    [data-testid="stStatusWidget"] {display:none;} 
     </style>
     """,
     unsafe_allow_html=True
@@ -247,7 +245,7 @@ with st.sidebar:
     if st.button("🏠 Inicio", use_container_width=True):
         st.switch_page("main.py")
     st.markdown(
-        '<div class="sb-footer">Camara Fabrica Produccion · v1.0</div>',
+        '<div class="sb-footer">Control de Produccion · v1.0</div>',
         unsafe_allow_html=True,
     )
 

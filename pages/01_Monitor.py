@@ -795,4 +795,4 @@ if not df_prod_hoy.empty:
     st.table(df_tabla)
 
 st.divider()
-st.caption(f"Sistema de Monitoreo — Camara Fabrica Produccion · {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+st.caption(f"Sistema de Monitoreo — Control de Produccion · {datetime.now().strftime('%d/%m/%Y %H:%M')}")
