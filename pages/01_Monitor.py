@@ -35,6 +35,38 @@ st.markdown("""
   50% { background-color: #ef4444 !important; opacity: 0.3 !important; color: white !important; text-shadow: 0 0 8px #ffaaaa; }
   100% { background-color: #5c1010 !important; opacity: 1.0 !important; color: white !important; }
 }
+/* ── Alerta Urgente: pulso de borde rojo ── */
+@keyframes pulseUrgente {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.85); border-color: #ef4444; }
+    60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0); border-color: #991b1b; }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);  border-color: #ef4444; }
+}
+.alerta-urgente {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #7f1d1d 0%, #3b0808 100%);
+    border: 2px solid #ef4444;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+    animation: pulseUrgente 1.8s ease-out infinite;
+}
+.alerta-urgente-titulo {
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fca5a5;
+}
+.alerta-urgente-ordenes {
+    font-size: 15px;
+    margin-top: 5px;
+    color: #ffffff;
+    font-weight: 700;
+    word-break: break-all;
+}
+
 /* ── Tabs estilo nativo oscuro ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: 4px;
@@ -374,6 +406,24 @@ else:
 
 # ── TAB 1: PRODUCCIÓN ────────────────────────────────────────────────────────
 with tab_prod:
+    # ── Alerta de órdenes urgentes activas ───────────────────────────────────
+    if not df_total.empty:
+        _urgentes = [
+            o for o in df_total["orden"].unique()
+            if "[URGENTE]" in str(o).upper() and o not in entregadas
+        ]
+        if _urgentes:
+            _lista_urgentes = "  ·  ".join(_urgentes)
+            st.markdown(f"""
+            <div class="alerta-urgente">
+                <span style="font-size:30px; flex-shrink:0;">🚨</span>
+                <div>
+                    <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
+                    <div class="alerta-urgente-ordenes">{_lista_urgentes}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
     busqueda = st.text_input(
         "🔍 Buscar por número de orden",
         placeholder="Escribí el número de orden...",
