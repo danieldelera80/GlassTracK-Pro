@@ -196,6 +196,39 @@ div[data-baseweb="input"]:focus-within {
     -webkit-text-fill-color: transparent;
 }
 
+/* ── Responsive Mobile / Tablet ── */
+@media screen and (max-width: 768px) {
+    /* Columnas Streamlit apiladas */
+    [data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+    /* Métricas compactas */
+    .glass-metric { padding: 14px 10px; margin-bottom: 8px; }
+    .glass-value  { font-size: 34px; }
+    .glass-title  { font-size: 11px; letter-spacing: 1px; }
+    /* Botones touch-friendly (mínimo 44px WCAG) */
+    .stButton > button { min-height: 3.8em !important; font-size: 16px !important; }
+    /* Tabs más compactos */
+    button[data-baseweb="tab"] { font-size: 13px !important; padding: 8px 10px !important; }
+    /* Inputs full-width */
+    [data-testid="stTextInput"] input { font-size: 16px !important; } /* evita zoom iOS */
+    /* Radio horizontal pasa a vertical */
+    [data-testid="stRadio"] > div { flex-direction: column !important; }
+    /* Sidebar más estrecho */
+    [data-testid="stSidebar"] { min-width: 200px !important; max-width: 260px !important; }
+    /* Plotly chart: quitar toolbar en mobile */
+    .modebar { display: none !important; }
+}
+
+@media screen and (max-width: 480px) {
+    .glass-value  { font-size: 26px; }
+    .glass-title  { font-size: 10px; }
+    /* Tabla: fuente más pequeña para caber en pantalla */
+    [data-testid="stDataFrame"] { font-size: 12px !important; }
+}
+
 /* ── Panel de éxito ── */
 .success-panel {
     padding: 28px 20px; margin: 16px 0;
