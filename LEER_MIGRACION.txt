@@ -1,0 +1,25 @@
+=============================================================
+GUIA DE MIGRACION A NUEVA PC DE PRODUCCION - CONTACTO S.A.
+=============================================================
+
+Para instalar este sistema en cualquier otra computadora con Windows:
+
+1. INSTALAR PYTHON:
+   - Descarga e instala Python 3.10 o superior (https://www.python.org/downloads/).
+   - IMPORTANTE: Durante la instalacion de Python, debes marcar si o si la casilla que dice "Add Python to PATH" que aparece abajo del todo en la primera ventana que se abre.
+
+2. COPIAR LA CARPETA:
+   - Copia TODA esta carpeta ("copia de mjjm funcionando neo" o como le pongas de nombre) a la nueva pc mediante un pendrive, Google Drive o como prefieras. Sugerimos dejarla en el Escritorio o Documentos (C:/).
+
+3. EJECUTAR EL INSTALADOR:
+   - Dentro de la carpeta, dale doble clic al archivo "1_INSTALAR_SISTEMA.bat".
+   - Esto creara un entorno virtual ("venv") instalara todas las librerias automaticamente usando los "requirements.txt". 
+   - No tenes que escribir un solo comando. Espera que termine y diga "COMPLETADO CON EXITO".
+
+4. INICIAR EL SISTEMA:
+   - Para abrir el sistema ahora y cada dia de produccion, dale doble clic a "2_ARRANCAR_SISTEMA.bat". 
+   - Se va a abrir una consola negra en el fondo y te abrira el navegador solo con la aplicacion.
+
+NOTAS ADICIONALES:
+- Si vas a usar la base de datos remota (Neon), con lo anterior es suficiente.
+- La computadora siempre conectada a internet, salvo que en algun punto volvamos a migrar este proyecto a usar la base local (sqlite).
