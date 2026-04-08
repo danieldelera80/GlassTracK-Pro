@@ -707,34 +707,6 @@ if st.session_state.get("is_admin", False) and not df_prod.empty:
                     st.error(f"❌ Error al eliminar: {_e}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SECCIÓN ENTREGAS
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.divider()
-st.markdown("### 📦 Registro de Entregas")
-
-if df_entrega.empty:
-    st.info("📭 No se registró ninguna entrega todavía.")
-else:
-    col_e1, col_e2 = st.columns(2)
-    col_e1.metric("Entregas Hoy",        len(df_entrega_hoy))
-    col_e2.metric("Entregas Históricas",  len(df_entrega))
-
-    st.write("")
-
-    df_ent_show = df_entrega[["orden", "usuario", "fecha_hora"]].rename(columns={
-        "orden":      "Orden",
-        "usuario":    "Operario",
-        "fecha_hora": "Fecha / Hora",
-    })
-
-    if busqueda.strip():
-        df_ent_show = df_ent_show[
-            df_ent_show["Orden"].astype(str).str.contains(busqueda.strip(), case=False, na=False)
-        ]
-
-    st.dataframe(df_ent_show, use_container_width=True, hide_index=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -821,11 +793,9 @@ if not df_prod_hoy.empty:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # 4. Tabla con podio y medallas
+    # 4. Tabla de actividad sin ranking ni podio
     st.markdown("#### 📑 Reporte del Turno")
     df_tabla = df_rendimiento.sort_values("Total Vidrios", ascending=False).reset_index(drop=True)
-    _medals = ["🥇", "🥈", "🥉"] + [""] * max(0, len(df_tabla) - 3)
-    df_tabla.insert(0, "Pos.", [f"{_medals[i]}  {i + 1}" for i in range(len(df_tabla))])
     df_tabla["% Turno"] = df_tabla["% Turno"].astype(str) + "%"
     st.dataframe(df_tabla, use_container_width=True, hide_index=True)
 
