@@ -11,7 +11,7 @@ from styles import CSS_GLOBAL, render_sb_header
 
 st.set_page_config(
     page_title="Control de Produccion",
-    page_icon="🚀",
+    page_icon="🏭",
     layout="wide",
 )
 
@@ -40,6 +40,8 @@ st.markdown("""
 
 # ── Auto-refresh cada 15 segundos ─────────────────────────────────────────────
 st_autorefresh(interval=15_000, key="monitor_autorefresh")
+_ultimo_refresh = datetime.now().strftime("%H:%M:%S")
+st.toast(f"Datos actualizados a las {_ultimo_refresh}", icon="🔄")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -55,7 +57,7 @@ def cargar_datos():
       entregadas: set de órdenes que ya pasaron por Entrega
       terminadas: set de órdenes en Terminado
     """
-    query = "SELECT * FROM registros ORDER BY fecha_hora DESC"
+    query = "SELECT * FROM registros WHERE fecha_hora >= NOW() - INTERVAL '90 days' ORDER BY fecha_hora DESC"
     df_total = conn.query(query, ttl=0)
 
     if df_total is None or df_total.empty:
@@ -322,8 +324,8 @@ hoy = datetime.now().date()
 df_prod_hoy    = df_prod[df_prod["fecha_hora"].dt.date == hoy]       if not df_prod.empty    else pd.DataFrame()
 df_entrega_hoy = df_entrega[df_entrega["fecha_hora"].dt.date == hoy] if not df_entrega.empty else pd.DataFrame()
 
-total_hoy      = len(df_prod_hoy)
-entregados_hoy = len(df_entrega_hoy)
+total_hoy      = df_prod_hoy["orden"].nunique() if not df_prod_hoy.empty else 0
+entregados_hoy = df_entrega_hoy["orden"].nunique() if not df_entrega_hoy.empty else 0
 sectores_hoy   = df_prod_hoy["sector"].nunique() if not df_prod_hoy.empty else 0
 
 c1, c2, c3 = st.columns(3)

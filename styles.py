@@ -39,8 +39,9 @@ footer {
     to { opacity: 1; transform: translateY(0); }
 }
 
-[data-testid="stVerticalBlock"] > div {
-    animation: fadeInUp 0.4s ease-out forwards;
+/* Animación solo en primer render (sin parpadeo en autorefresh) */
+[data-testid="stVerticalBlock"] > div:first-child {
+    animation: fadeInUp 0.3s ease-out forwards;
 }
 
 /* ── Ocultar navegación automática de Streamlit ── */
