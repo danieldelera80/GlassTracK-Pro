@@ -429,7 +429,7 @@ elif paso == 2:
         envio = u.get("enviado_a")
         if envio:
             if envio == "Dañado":
-                extra = '<div style="font-size:13px; color:#ff8a8a; margin-top:6px;">💔 Marcado como Dañado</div>'
+                extra = '<div style="font-size:13px; color:#ff8a8a; margin-top:6px;">⚠️ Marcado como Dañado</div>'
             elif envio == SECTOR_TERMINADO:
                 extra = '<div style="font-size:13px; color:#f0c040; margin-top:8px;">⏳ Enviado a Terminado</div>'
             else:

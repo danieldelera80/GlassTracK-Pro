@@ -397,7 +397,7 @@ with tab_prod:
         def calcular_estado(row):
             o = str(row["orden"]).strip()
             s = str(row["sector"]).strip()
-            if o in danadas:    return "💔 Dañado"
+            if o in danadas:    return "⚠️ Dañado"
             if o in entregadas: return "✅ Entregado"
             if o in terminadas: return "⏳ Terminado"
             if s.startswith("En Proceso en"): return "⚙️ En Proceso"
@@ -433,7 +433,7 @@ with tab_prod:
             leg1, leg2, leg3 = st.columns(3)
             leg1.markdown(
                 '<div style="background:#5c1010;color:#ff8a8a;padding:6px 12px;'
-                'border-radius:6px;font-size:12px;text-align:center;">💔 Dañado</div>',
+                'border-radius:6px;font-size:12px;text-align:center;">⚠️ Dañado</div>',
                 unsafe_allow_html=True,
             )
             leg2.markdown(
