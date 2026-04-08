@@ -247,6 +247,48 @@ es_terminado = st.session_state.sector_confirmado == SECTOR_TERMINADO
 st.markdown("## 📋 Carga de Producción")
 render_steps(st.session_state.paso, get_step_labels())
 
+# ── Alerta de órdenes urgentes activas ───────────────────────────────────────
+try:
+    _df_urg = conn.query(
+        "SELECT DISTINCT orden FROM registros WHERE orden ILIKE '%[URGENTE]%' ORDER BY orden",
+        ttl=30
+    )
+    if _df_urg is not None and not _df_urg.empty:
+        # Filtrar solo las que no fueron entregadas (último estado != Entrega)
+        _df_estados = conn.query(
+            "SELECT DISTINCT ON (orden) orden, sector FROM registros ORDER BY orden, fecha_hora DESC",
+            ttl=30
+        )
+        _entregadas_form = set()
+        if _df_estados is not None and not _df_estados.empty:
+            _entregadas_form = set(
+                _df_estados[_df_estados["sector"] == "Entrega"]["orden"].tolist()
+            )
+        _df_urg_sector = conn.query(
+            "SELECT DISTINCT ON (orden) orden, sector FROM registros "
+            "WHERE orden ILIKE '%[URGENTE]%' ORDER BY orden, fecha_hora DESC",
+            ttl=30
+        )
+        for _, _urg_row in _df_urg_sector.iterrows():
+            _urg_orden = _urg_row["orden"]
+            if _urg_orden in _entregadas_form:
+                continue
+            _urg_sector = _urg_row["sector"]
+            st.markdown(f"""
+            <div class="alerta-urgente">
+                <span style="font-size:28px; flex-shrink:0;">🚨</span>
+                <div>
+                    <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
+                    <div class="alerta-urgente-ordenes">{_urg_orden}</div>
+                    <div style="font-size:12px; color:#fca5a5; margin-top:4px;">
+                        📍 Sector actual: <b>{_urg_sector}</b>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+except Exception:
+    pass  # Si falla la consulta, no interrumpir el flujo del formulario
+
 paso = st.session_state.paso
 
 # ──────────────────────────────────────────────────────────────────────────────

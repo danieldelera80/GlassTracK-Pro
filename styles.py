@@ -196,6 +196,38 @@ div[data-baseweb="input"]:focus-within {
     -webkit-text-fill-color: transparent;
 }
 
+/* ── Alerta Urgente global (Monitor + Formulario) ── */
+@keyframes pulseUrgente {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.85); border-color: #ef4444; }
+    60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0);  border-color: #991b1b; }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);     border-color: #ef4444; }
+}
+.alerta-urgente {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #7f1d1d 0%, #3b0808 100%);
+    border: 2px solid #ef4444;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+    animation: pulseUrgente 1.8s ease-out infinite;
+}
+.alerta-urgente-titulo {
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fca5a5;
+}
+.alerta-urgente-ordenes {
+    font-size: 15px;
+    margin-top: 5px;
+    color: #ffffff;
+    font-weight: 700;
+    word-break: break-all;
+}
+
 /* ── Responsive Mobile / Tablet ── */
 @media screen and (max-width: 768px) {
     /* Columnas Streamlit apiladas */
