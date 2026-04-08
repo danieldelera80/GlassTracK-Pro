@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 from sqlalchemy import text
@@ -746,46 +746,88 @@ if not df_prod_hoy.empty:
     fecha_format = hoy.strftime("%d/%m/%Y")
     st.markdown(f"### 🎯 Rendimiento Operativo — {fecha_format}")
 
-    # 1. Preparar métricas administrativas
+    # 1. Preparar métricas
     conteo = df_prod_hoy["usuario"].value_counts().reset_index()
     conteo.columns = ["Operario", "Total Vidrios"]
-    
+
     ultimos_movs = df_prod_hoy.groupby("usuario")["fecha_hora"].max().reset_index()
-    ultimos_movs.columns = ["Operario", "Último Movimiento"]
-    ultimos_movs["Último Movimiento"] = ultimos_movs["Último Movimiento"].dt.strftime("%H:%M:%S")
+    ultimos_movs.columns = ["Operario", "Último Mov."]
+    ultimos_movs["Último Mov."] = ultimos_movs["Último Mov."].dt.strftime("%H:%M")
 
     df_rendimiento = pd.merge(conteo, ultimos_movs, on="Operario")
-    
-    # Orden ascendente en Plotly para que el mayor quede arriba en barra horizontal
-    df_grafico = df_rendimiento.sort_values(by="Total Vidrios", ascending=True)
+    total_vidrios_turno = df_rendimiento["Total Vidrios"].sum()
+    df_rendimiento["% Turno"] = (
+        df_rendimiento["Total Vidrios"] / total_vidrios_turno * 100
+    ).round(1)
 
-    # 2. Gráfico Ejecutivo (Barra Horizontal, Color Corporativo, Flotante)
-    fig = px.bar(
-        df_grafico, 
-        x="Total Vidrios", 
-        y="Operario",
-        orientation='h',
-        text_auto=True, 
-        template="plotly_dark",
-        color_discrete_sequence=["#3b82f6"] # Azul tecnológico corporativo
-    )
+    df_grafico = df_rendimiento.sort_values("Total Vidrios", ascending=True)
+
+    # 2. Colores por ranking: oro → plata → bronce → azul para el resto
+    _RANK_COLORS = ["#f59e0b", "#94a3b8", "#b45309"]
+    n_ops = len(df_grafico)
+    bar_colors = []
+    for _i in range(n_ops):
+        rank = n_ops - 1 - _i   # 0 = máximo rendimiento (está al final, ascending=True)
+        bar_colors.append(_RANK_COLORS[rank] if rank < 3 else "#3b82f6")
+
+    # 3. Gráfico interactivo con graph_objects
+    fig = go.Figure(go.Bar(
+        x=df_grafico["Total Vidrios"],
+        y=df_grafico["Operario"],
+        orientation="h",
+        marker=dict(
+            color=bar_colors,
+            opacity=0.92,
+            line=dict(color="rgba(255,255,255,0.12)", width=1),
+        ),
+        text=df_grafico["Total Vidrios"],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=17, color="white", family="Outfit, sans-serif"),
+        customdata=df_grafico[["% Turno", "Último Mov."]].values,
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Vidrios procesados: <b>%{x}</b><br>"
+            "% del turno: <b>%{customdata[0]}%</b><br>"
+            "Último movimiento: <b>%{customdata[1]}</b>"
+            "<extra></extra>"
+        ),
+    ))
+
     fig.update_layout(
-        showlegend=False, 
-        margin=dict(t=20, b=20, l=10, r=20),
-        xaxis_title=None,
-        yaxis_title=None,
+        template="plotly_dark",
+        showlegend=False,
+        margin=dict(t=10, b=10, l=20, r=40),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
-        yaxis=dict(showgrid=False)
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.06)",
+            zeroline=False,
+            tickfont=dict(size=13, color="#94a3b8"),
+        ),
+        yaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=15, color="#e2e8f0"),
+        ),
+        height=max(180, n_ops * 85),
+        bargap=0.38,
+        hoverlabel=dict(
+            bgcolor="#1e293b",
+            bordercolor="#334155",
+            font=dict(size=13, family="Outfit, sans-serif", color="white"),
+        ),
     )
+
     st.plotly_chart(fig, use_container_width=True)
 
-    # 3. Tabla Analítica de Apoyo
-    st.markdown("#### 📑 Reporte de Actividad del Turno")
-    df_tabla = df_rendimiento.sort_values(by="Total Vidrios", ascending=False).reset_index(drop=True)
-    df_tabla.index = df_tabla.index + 1  # Enumerar desde 1
-    st.table(df_tabla)
+    # 4. Tabla con podio y medallas
+    st.markdown("#### 📑 Reporte del Turno")
+    df_tabla = df_rendimiento.sort_values("Total Vidrios", ascending=False).reset_index(drop=True)
+    _medals = ["🥇", "🥈", "🥉"] + [""] * max(0, len(df_tabla) - 3)
+    df_tabla.insert(0, "Pos.", [f"{_medals[i]}  {i + 1}" for i in range(len(df_tabla))])
+    df_tabla["% Turno"] = df_tabla["% Turno"].astype(str) + "%"
+    st.dataframe(df_tabla, use_container_width=True, hide_index=True)
 
 st.divider()
 st.caption(f"Sistema de Monitoreo — Control de Produccion · {datetime.now().strftime('%d/%m/%Y %H:%M')}")
