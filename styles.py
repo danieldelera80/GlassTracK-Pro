@@ -12,9 +12,12 @@ html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
-/* ── Ocultar "Manage app" y toolbar de Streamlit Cloud ── */
+/* ── Ocultar "Manage app", toolbar y header de Streamlit Cloud ── */
+header,
+[data-testid="stHeader"],
 [data-testid="stToolbar"],
 [data-testid="manage-app-button"],
+[data-testid="stStatusWidget"],
 .stDeployButton,
 #MainMenu,
 footer {
