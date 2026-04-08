@@ -7,12 +7,13 @@ import os
 import csv
 from pathlib import Path
 
-from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection
+from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps, render_contexto
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
 verificar_licencia()
+verificar_estado_sistema()
 conn = get_connection()
 
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)

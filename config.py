@@ -41,6 +41,19 @@ def get_connection():
     """Retorna la conexión activa a Neon definida en secrets.toml"""
     return st.connection("postgresql", type="sql")
 
+def verificar_estado_sistema():
+    """Kill Switch maestro: si BLOQUEO_ACTIVO es true en secrets, tira la app abajo."""
+    bloqueado = False
+    
+    # Chequeamos si existe en los secrets locales o de Streamlit Cloud
+    if "BLOQUEO_ACTIVO" in st.secrets:
+        if str(st.secrets["BLOQUEO_ACTIVO"]).lower() in ['true', '1', 'yes', 't']:
+            bloqueado = True
+            
+    if bloqueado:
+        st.error("🚨 **MANTENIMIENTO URGENTE REQUERIDO** 🚨\n\nEl sistema se encuentra temporalmente fuera de servicio por tareas de mantenimiento crítico. Por favor, aguarde a que el administrador restablezca los servicios.")
+        st.stop()
+
 def init_db() -> None:
     """Crea la tabla registros en Neon si no existe."""
     conn = get_connection()

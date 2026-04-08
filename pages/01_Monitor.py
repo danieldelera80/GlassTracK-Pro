@@ -5,7 +5,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 from sqlalchemy import text
 
-from config import SECTORES_PRODUCCION, verificar_licencia, get_connection
+from config import SECTORES_PRODUCCION, verificar_licencia, get_connection, verificar_estado_sistema
 from config import SECTORES_ESCANEO_DIRECTO
 from styles import CSS_GLOBAL, render_sb_header
 
@@ -16,6 +16,7 @@ st.set_page_config(
 )
 
 verificar_licencia()
+verificar_estado_sistema()
 conn = get_connection()
 
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)

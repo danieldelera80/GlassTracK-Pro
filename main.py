@@ -1,5 +1,5 @@
 import streamlit as st
-from config import init_db, verificar_licencia
+from config import init_db, verificar_licencia, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header
 
 st.set_page_config(
@@ -9,6 +9,7 @@ st.set_page_config(
 )
 
 verificar_licencia()
+verificar_estado_sistema()
 
 try:
     init_db()
