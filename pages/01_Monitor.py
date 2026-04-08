@@ -58,7 +58,7 @@ def cargar_datos():
     df_total = conn.query(query, ttl=0)
 
     if df_total is None or df_total.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), set(), set()
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), set(), set(), set()
 
     df_total["fecha_hora"] = pd.to_datetime(df_total["fecha_hora"])
     df_total["orden"] = df_total["orden"].astype(str).str.strip()
@@ -77,7 +77,7 @@ def cargar_datos():
     terminadas: set = set(df_estado_actual[df_estado_actual["sector"] == "Terminado"]["orden"])
     danadas:    set = set(df_estado_actual[df_estado_actual["sector"] == "Dañado"]["orden"])
 
-    return df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas
+    return df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas
 
 
 def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas: set):
@@ -142,13 +142,15 @@ def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas:
         if parpadeo:
              estilos = ["animation: blinkOrange 1.5s infinite; font-weight:bold;"] * len(row)
              
-        if col_estado:
-            if es_entregado:
-                estilos[df.columns.get_loc(col_estado)] = \
-                    "background-color:#1a4a2e; color:#4ada75; font-weight:700; text-align:center;"
-            elif es_terminado:
-                estilos[df.columns.get_loc(col_estado)] = \
-                    "background-color:#3a2e00; color:#f0c040; font-weight:700; text-align:center;"
+        if es_entregado:
+            estilos = ["background-color:#0d2818; color:#78d495;"] * len(row)
+            if col_estado:
+                estilos[df.columns.get_loc(col_estado)] = "background-color:#1a4a2e; color:#4ada75; font-weight:700; text-align:center;"
+        elif es_terminado:
+            estilos = ["background-color:#261f00; color:#d6b04b;"] * len(row)
+            if col_estado:
+                estilos[df.columns.get_loc(col_estado)] = "background-color:#3a2e00; color:#f0c040; font-weight:700; text-align:center;"
+                
         return estilos
 
     return df.style.apply(estilo_fila, axis=1)
@@ -304,7 +306,7 @@ with st.sidebar:
 st.markdown("## 🚀 Monitor de Producción Industrial")
 
 try:
-    df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas = cargar_datos()
+    df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas = cargar_datos()
 except Exception as e:
     st.error(f"❌ Error al conectar con la base de datos: {e}")
     st.stop()
@@ -374,11 +376,11 @@ with col_info:
 
 st.write("")
 
-if df_prod.empty:
+if df_total.empty:
     st.info("📭 No hay registros de producción todavía.")
 else:
     # ── Construir tabla unificada ─────────────────────────────────────────────
-    df_vista = df_prod.copy()
+    df_vista = df_total.copy()
     
     # Agrupar: Un renglón por orden mostrando el más reciente y dejando los últimos arriba
     df_vista = df_vista.sort_values("fecha_hora", ascending=False).drop_duplicates(subset=["orden"], keep="first")
