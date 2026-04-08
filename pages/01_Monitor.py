@@ -406,43 +406,35 @@ else:
 
 # ── TAB 1: PRODUCCIÓN ────────────────────────────────────────────────────────
 with tab_prod:
-    # ── Alerta de órdenes urgentes activas (clickeable → abre modal) ─────────
+    # ── Alerta de órdenes urgentes activas (banner + botón abrir) ────────────
     if not df_total.empty:
         _urgentes = [
             o for o in df_total["orden"].unique()
             if "[URGENTE]" in str(o).upper() and o not in entregadas
         ]
-        if _urgentes:
-            for _i, _urg in enumerate(_urgentes):
-                _sector_urg = df_total[df_total["orden"] == _urg].sort_values("fecha_hora", ascending=False).iloc[0]["sector"]
-                _uid = f"urgbtn_{_i}"
-                # Marcador invisible: permite apuntar el CSS al botón siguiente
-                st.markdown(f'<span id="{_uid}"></span>', unsafe_allow_html=True)
+        for _i, _urg in enumerate(_urgentes):
+            _sector_urg = (
+                df_total[df_total["orden"] == _urg]
+                .sort_values("fecha_hora", ascending=False)
+                .iloc[0]["sector"]
+            )
+            _col_banner, _col_btn = st.columns([6, 1])
+            with _col_banner:
                 st.markdown(f"""
-                <style>
-                [data-testid="element-container"]:has(span#{_uid})
-                + [data-testid="element-container"] button {{
-                    background: linear-gradient(135deg, #7f1d1d, #450a0a) !important;
-                    border: 2px solid #ef4444 !important;
-                    color: white !important;
-                    padding: 14px 20px !important;
-                    min-height: 72px !important;
-                    font-size: 15px !important;
-                    font-weight: 700 !important;
-                    border-radius: 12px !important;
-                    animation: pulseUrgente 1.8s ease-out infinite !important;
-                    text-align: left !important;
-                    justify-content: flex-start !important;
-                    line-height: 1.6 !important;
-                    letter-spacing: 0.3px !important;
-                }}
-                </style>
+                <div class="alerta-urgente">
+                    <span style="font-size:28px; flex-shrink:0;">🚨</span>
+                    <div>
+                        <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
+                        <div class="alerta-urgente-ordenes">{_urg}</div>
+                        <div style="font-size:12px; color:#fca5a5; margin-top:4px;">
+                            📍 Sector actual: <b>{_sector_urg}</b>
+                        </div>
+                    </div>
+                </div>
                 """, unsafe_allow_html=True)
-                if st.button(
-                    f"🚨  {_urg}     📍 {_sector_urg}",
-                    key=_uid,
-                    use_container_width=True,
-                ):
+            with _col_btn:
+                st.markdown("<br><br>", unsafe_allow_html=True)
+                if st.button("👁️ Abrir", key=f"urgbtn_{_i}", use_container_width=True):
                     mostrar_modal_orden(_urg)
 
     busqueda = st.text_input(
