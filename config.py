@@ -15,8 +15,8 @@ FECHA_LIMITE: datetime = datetime(2026, 12, 31)
 CONTACTO_SOPORTE: str = "Daniel De Lera"
 CONTACTO_TEL:     str = "+54 9 3624210356"
 
-# Contraseña global para acciones críticas
-ADMIN_PASSWORD: str = "admin123"
+# Contraseña global para acciones críticas — definida en st.secrets, nunca en código
+ADMIN_PASSWORD: str = st.secrets.get("ADMIN_PASSWORD", "")
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  RUTAS Y SECTORES
