@@ -304,99 +304,6 @@ elif paso == 1:
 elif paso == 2:
     render_contexto(st.session_state.op_confirmado, st.session_state.sector_confirmado)
 
-    # ── TABLERO KANBAN DE PLANTA ────────────────────────────────────────────
-    if not es_terminado and not es_entrega:
-        entrantes, en_proceso = obtener_activos(st.session_state.sector_confirmado)
-        
-        tab_pendientes, tab_proceso = st.tabs([
-            f"📥 PENDIENTES ({len(entrantes)})", 
-            f"⚙️ EN PROCESO ({len(en_proceso)})"
-        ])
-        
-        # PANEL A: PENDIENTES DE RECIBIR
-        with tab_pendientes:
-            if not entrantes:
-                st.info("No hay órdenes entrantes.")
-            else:
-                for row in entrantes:
-                    with st.container():
-                        st.markdown(f"""
-                        <div style="background:#1e293b; border-left:4px solid #3b82f6; border-radius:6px; padding:12px; margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:start;">
-                                <span style="font-size:18px; font-weight:bold; color:#60a5fa;">📄 {row['orden']}</span>
-                                <span style="font-size:13px; color:#cbd5e1; background:#0f172a; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
-                            </div>
-                            <div style="font-size:12px; color:#94a3b8; margin-top:6px;">Enviado por: {row['usuario']} — {row['fecha_hora']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        if st.button(f"↘️ TOMAR PIEZA {row['orden']}", key=f"rec_{row['orden']}", use_container_width=True):
-                            success, error = guardar_registro(
-                                row['orden'], row.get('carro', 0), row.get('lado', '-'), 
-                                st.session_state.op_confirmado, 
-                                f"En Proceso en {st.session_state.sector_confirmado}"
-                            )
-                            if success:
-                                if error == "OFFLINE":
-                                    st.warning("Guardado en Caché Local ⚠️")
-                                else:
-                                    st.success(f"¡Orden {row['orden']} recibida!")
-                                st.rerun()
-                            else:
-                                st.error(error)
-                
-        # PANEL B: EN PROCESO (Listas para finalizar)
-        with tab_proceso:
-            if not en_proceso:
-                st.info("No tenés piezas en tu mesa.")
-            else:
-                for row in en_proceso:
-                    with st.container():
-                        st.markdown(f"""
-                        <div style="background:#1f1605; border-left:4px solid #eab308; border-radius:6px; padding:12px; margin-bottom:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:start;">
-                                <span style="font-size:18px; font-weight:bold; color:#facc15;">⚙️ {row['orden']}</span>
-                                <span style="font-size:13px; color:#fde047; background:#422006; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
-                            </div>
-                            <div style="font-size:12px; color:#a1a1aa; margin-top:6px;">Iniciado el: {row['fecha_hora']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        if st.button(f"📤 DESPACHAR {row['orden']}", key=f"fin_{row['orden']}", use_container_width=True):
-                            # Salta automáticamente al Paso 3 para elegir carro y destino
-                            st.session_state.orden_val = row['orden']
-                            st.session_state.paso = 3
-                            st.rerun()
-                            
-        st.markdown("<hr style='margin: 15px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
-        st.markdown("### Escanear manualmente (Alternativo)")
-
-    # ── KANBAN DE ENTREGA ───────────────────────────────────────────────────
-    if es_entrega:
-        pendientes_entrega = obtener_pendientes_entrega()
-        st.markdown(f"#### 📥 LISTAS PARA ENTREGAR ({len(pendientes_entrega)})")
-        if not pendientes_entrega:
-            st.info("No hay productos terminados esperando entrega.")
-        else:
-            for row in pendientes_entrega:
-                with st.container():
-                    col_info, col_btn = st.columns([7.5, 2.5])
-                    with col_info:
-                        st.markdown(f"""
-                        <div style="background:#0d2a1a; border-left:4px solid #4ada75; border-radius:6px; padding:0 10px; display:flex; justify-content:space-between; align-items:center; height:43px;">
-                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                <span style="font-size:16px; font-weight:bold; color:#4ada75; margin-right:8px;">📦 {row['orden']}</span>
-                                <span style="font-size:12px; color:#86efac; opacity:0.9;">por {row['usuario']} — {row['fecha_hora']}</span>
-                            </div>
-                            <span style="font-size:12px; color:#a7f3d0; background:#064e3b; padding:2px 6px; border-radius:4px; margin-left:10px; white-space:nowrap;">🛒 {row['carro']}  |  ↔️ {row['lado']}</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col_btn:
-                        if st.button("🚀 ENTREGAR", key=f"ent_{row['orden']}", use_container_width=True):
-                            st.session_state.orden_val = row['orden']
-                            st.session_state.entrega_lista = True
-                            st.rerun()
-        st.markdown("<hr style='margin: 15px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
-        st.markdown("### Escanear manualmente (Alternativo)")
-
     # ── Auto-guardar para Entrega / Terminado ──────────────────────────────────
     if st.session_state.entrega_lista:
         st.session_state.entrega_lista = False
@@ -563,6 +470,101 @@ elif paso == 2:
             with open(beep_path, "rb") as f:
                 b64 = base64.b64encode(f.read()).decode()
             st.markdown(f'<audio autoplay="true" style="display:none;"><source src="data:audio/wav;base64,{b64}" type="audio/wav"></audio>', unsafe_allow_html=True)
+
+
+    # ── TABLERO KANBAN DE PLANTA ────────────────────────────────────────────
+    st.markdown("<hr style='margin: 30px 0 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
+
+    if not es_terminado and not es_entrega:
+        entrantes, en_proceso = obtener_activos(st.session_state.sector_confirmado)
+        
+        tab_pendientes, tab_proceso = st.tabs([
+            f"📥 PENDIENTES ({len(entrantes)})", 
+            f"⚙️ EN PROCESO ({len(en_proceso)})"
+        ])
+        
+        # PANEL A: PENDIENTES DE RECIBIR
+        with tab_pendientes:
+            if not entrantes:
+                st.info("No hay órdenes entrantes.")
+            else:
+                for row in entrantes:
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="background:#1e293b; border-left:4px solid #3b82f6; border-radius:6px; padding:12px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:start;">
+                                <span style="font-size:18px; font-weight:bold; color:#60a5fa;">📄 {row['orden']}</span>
+                                <span style="font-size:13px; color:#cbd5e1; background:#0f172a; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
+                            </div>
+                            <div style="font-size:12px; color:#94a3b8; margin-top:6px;">Enviado por: {row['usuario']} — {row['fecha_hora']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"↘️ TOMAR PIEZA {row['orden']}", key=f"rec_{row['orden']}", use_container_width=True):
+                            success, error = guardar_registro(
+                                row['orden'], row.get('carro', 0), row.get('lado', '-'), 
+                                st.session_state.op_confirmado, 
+                                f"En Proceso en {st.session_state.sector_confirmado}"
+                            )
+                            if success:
+                                if error == "OFFLINE":
+                                    st.warning("Guardado en Caché Local ⚠️")
+                                else:
+                                    st.success(f"¡Orden {row['orden']} recibida!")
+                                st.rerun()
+                            else:
+                                st.error(error)
+                
+        # PANEL B: EN PROCESO (Listas para finalizar)
+        with tab_proceso:
+            if not en_proceso:
+                st.info("No tenés piezas en tu mesa.")
+            else:
+                for row in en_proceso:
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="background:#1f1605; border-left:4px solid #eab308; border-radius:6px; padding:12px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:start;">
+                                <span style="font-size:18px; font-weight:bold; color:#facc15;">⚙️ {row['orden']}</span>
+                                <span style="font-size:13px; color:#fde047; background:#422006; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
+                            </div>
+                            <div style="font-size:12px; color:#a1a1aa; margin-top:6px;">Iniciado el: {row['fecha_hora']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        if st.button(f"📤 DESPACHAR {row['orden']}", key=f"fin_{row['orden']}", use_container_width=True):
+                            # Salta automáticamente al Paso 3 para elegir carro y destino
+                            st.session_state.orden_val = row['orden']
+                            st.session_state.paso = 3
+                            st.rerun()
+                            
+
+
+    # ── KANBAN DE ENTREGA ───────────────────────────────────────────────────
+    if es_entrega:
+        pendientes_entrega = obtener_pendientes_entrega()
+        st.markdown(f"#### 📥 LISTAS PARA ENTREGAR ({len(pendientes_entrega)})")
+        if not pendientes_entrega:
+            st.info("No hay productos terminados esperando entrega.")
+        else:
+            for row in pendientes_entrega:
+                with st.container():
+                    col_info, col_btn = st.columns([7.5, 2.5])
+                    with col_info:
+                        st.markdown(f"""
+                        <div style="background:#0d2a1a; border-left:4px solid #4ada75; border-radius:6px; padding:0 10px; display:flex; justify-content:space-between; align-items:center; height:43px;">
+                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                <span style="font-size:16px; font-weight:bold; color:#4ada75; margin-right:8px;">📦 {row['orden']}</span>
+                                <span style="font-size:12px; color:#86efac; opacity:0.9;">por {row['usuario']} — {row['fecha_hora']}</span>
+                            </div>
+                            <span style="font-size:12px; color:#a7f3d0; background:#064e3b; padding:2px 6px; border-radius:4px; margin-left:10px; white-space:nowrap;">🛒 {row['carro']}  |  ↔️ {row['lado']}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with col_btn:
+                        if st.button("🚀 ENTREGAR", key=f"ent_{row['orden']}", use_container_width=True):
+                            st.session_state.orden_val = row['orden']
+                            st.session_state.entrega_lista = True
+                            st.rerun()
+
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  PASO 3 — Carro + Lado (solo sectores de producción, nunca Entrega)
