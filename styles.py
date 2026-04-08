@@ -18,11 +18,19 @@ header,
 [data-testid="stToolbar"],
 [data-testid="manage-app-button"],
 [data-testid="stStatusWidget"],
+[data-testid="stDecoration"],
+[data-testid="stBottom"],
 .stDeployButton,
+button[title="Manage app"],
+button[aria-label="Manage app"],
+[class*="viewerBadge"],
+[class*="managedApp"],
 #MainMenu,
 footer {
     display: none !important;
     visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 /* ── Animaciones ── */

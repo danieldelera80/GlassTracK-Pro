@@ -10,7 +10,7 @@ from config import SECTORES_ESCANEO_DIRECTO
 from styles import CSS_GLOBAL, render_sb_header
 
 st.set_page_config(
-    page_title="Monitor de Producción",
+    page_title="Control de Produccion",
     page_icon="🚀",
     layout="wide",
 )
@@ -304,7 +304,7 @@ with st.sidebar:
 #  CARGA DE DATOS
 # ══════════════════════════════════════════════════════════════════════════════
 
-st.markdown("## 🚀 Monitor de Producción Industrial")
+st.markdown("## 🏭 Control de Produccion")
 
 try:
     df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas = cargar_datos()
@@ -323,7 +323,6 @@ df_prod_hoy    = df_prod[df_prod["fecha_hora"].dt.date == hoy]       if not df_p
 df_entrega_hoy = df_entrega[df_entrega["fecha_hora"].dt.date == hoy] if not df_entrega.empty else pd.DataFrame()
 
 total_hoy      = len(df_prod_hoy)
-st.write(f"Órdenes encontradas: {df_prod.shape[0]}")
 entregados_hoy = len(df_entrega_hoy)
 sectores_hoy   = df_prod_hoy["sector"].nunique() if not df_prod_hoy.empty else 0
 
@@ -383,8 +382,15 @@ else:
     # ── Construir tabla unificada ─────────────────────────────────────────────
     df_vista = df_total.copy()
     
-    # Agrupar: Un renglón por orden mostrando el más reciente y dejando los últimos arriba
-    df_vista = df_vista.sort_values("fecha_hora", ascending=False).drop_duplicates(subset=["orden"], keep="first")
+    # Una sola fila por orden (el estado más reciente), con registros de hoy al tope
+    df_vista = (
+        df_vista
+        .sort_values("fecha_hora", ascending=False)
+        .drop_duplicates(subset=["orden"], keep="first")
+        .assign(_es_hoy=lambda d: d["fecha_hora"].dt.date == hoy)
+        .sort_values(["_es_hoy", "fecha_hora"], ascending=[False, False])
+        .drop(columns="_es_hoy")
+    )
 
     def calcular_estado(row):
         o = str(row["orden"]).strip()
