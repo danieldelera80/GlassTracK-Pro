@@ -12,6 +12,22 @@ from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_step
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stDecoration"] {display:none;}
+    /* Esto quita el menú de 'Manage app' abajo a la derecha */
+    [data-testid="stStatusWidget"] {display:none;} 
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 verificar_licencia()
 verificar_estado_sistema()
 conn = get_connection()

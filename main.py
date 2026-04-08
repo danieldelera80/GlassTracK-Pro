@@ -8,6 +8,22 @@ st.set_page_config(
     layout="centered",
 )
 
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stDecoration"] {display:none;}
+    /* Esto quita el menú de 'Manage app' abajo a la derecha */
+    [data-testid="stStatusWidget"] {display:none;} 
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 verificar_licencia()
 verificar_estado_sistema()
 
