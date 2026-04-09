@@ -73,7 +73,7 @@ st.markdown("""
 
 # ── Auto-refresh cada 15 segundos ─────────────────────────────────────────────
 st_autorefresh(interval=15_000, key="monitor_autorefresh")
-_ultimo_refresh = datetime.now().strftime("%H:%M:%S")
+_ultimo_refresh = datetime.now(_ARG_TZ).strftime("%H:%M:%S")
 st.toast(f"Datos actualizados a las {_ultimo_refresh}", icon="🔄")
 
 
