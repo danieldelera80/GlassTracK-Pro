@@ -11,14 +11,12 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    /* Solo ocultamos botones específicos, NO el header completo */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
     footer {visibility: hidden;}
     .stAppDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
     [data-testid="stDecoration"] {display:none;}
-    /* Esto quita el menú de 'Manage app' abajo a la derecha */
-    [data-testid="stStatusWidget"] {display:none;} 
+    [data-testid="stStatusWidget"] {display:none;}
     </style>
     """,
     unsafe_allow_html=True

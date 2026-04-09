@@ -12,10 +12,8 @@ html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
-/* ── Ocultar "Manage app", toolbar y header de Streamlit Cloud ── */
-header,
-[data-testid="stHeader"],
-[data-testid="stToolbar"],
+/* ── Ocultar elementos de Streamlit Cloud que no necesitamos ── */
+/* NO se oculta header ni stHeader: contienen el botón del sidebar y el selector de tema */
 [data-testid="manage-app-button"],
 [data-testid="stStatusWidget"],
 [data-testid="stDecoration"],
