@@ -93,14 +93,20 @@ def cargar_datos():
     df_danado    = df_total[df_total["sector"] == "Dañado"].copy()
     df_prod      = df_total[~df_total["sector"].isin(["Entrega", "Terminado", "Dañado"])].copy()
 
-    df_estado_actual = df_total.sort_values("fecha_hora", ascending=False).drop_duplicates(subset=["orden"], keep="first")
+    # Una sola fila por orden: la más reciente (dedup canónico)
+    df_estado_actual = (
+        df_total
+        .sort_values("fecha_hora", ascending=False)
+        .drop_duplicates(subset=["orden"], keep="first")
+        .copy()
+    )
     df_estado_actual["orden"] = df_estado_actual["orden"].astype(str).str.strip()
 
     entregadas: set = set(df_estado_actual[df_estado_actual["sector"] == "Entrega"]["orden"])
     terminadas: set = set(df_estado_actual[df_estado_actual["sector"] == "Terminado"]["orden"])
     danadas:    set = set(df_estado_actual[df_estado_actual["sector"] == "Dañado"]["orden"])
 
-    return df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas
+    return df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas, df_estado_actual
 
 
 def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas: set):
@@ -311,7 +317,7 @@ with st.sidebar:
 st.markdown("## 🏭 Control de Produccion")
 
 try:
-    df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas = cargar_datos()
+    df_total, df_prod, df_entrega, df_terminado, entregadas, terminadas, danadas, df_estado_actual = cargar_datos()
 except Exception as e:
     st.error(f"❌ Error al conectar con la base de datos: {e}")
     st.stop()
@@ -415,14 +421,14 @@ with tab_prod:
     if df_total.empty:
         st.info("📭 No hay registros de producción todavía.")
     else:
-        df_vista = df_total.copy()
+        # df_estado_actual ya tiene 1 fila por orden (la más reciente).
+        # Solo ordenamos: primero las de hoy, luego por fecha desc.
         df_vista = (
-            df_vista
-            .sort_values("fecha_hora", ascending=False)
-            .drop_duplicates(subset=["orden"], keep="first")
+            df_estado_actual.copy()
             .assign(_es_hoy=lambda d: d["fecha_hora"].dt.date == hoy)
             .sort_values(["_es_hoy", "fecha_hora"], ascending=[False, False])
             .drop(columns="_es_hoy")
+            .reset_index(drop=True)
         )
 
         def calcular_estado(row):
