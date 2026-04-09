@@ -280,7 +280,6 @@ es_escaneo_directo = st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRE
 es_entrega = st.session_state.sector_confirmado == SECTOR_ENTREGA
 es_terminado = st.session_state.sector_confirmado == SECTOR_TERMINADO
 
-st.markdown("## 📋 Carga de Producción")
 render_steps(st.session_state.paso, get_step_labels())
 
 # ── Alerta de órdenes urgentes activas (filtrada por sector del operario) ─────

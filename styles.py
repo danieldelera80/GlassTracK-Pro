@@ -132,10 +132,18 @@ div[data-baseweb="input"]:focus-within {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
 }
 
+/* ── Reducir padding superior para que la barra quede pegada al borde ── */
+.main .block-container { padding-top: 0.5rem !important; }
+
 /* ── Barra de pasos ── */
 .steps-bar {
     display: flex; justify-content: space-between;
-    align-items: center; margin-bottom: 28px; position: relative;
+    align-items: center; margin-bottom: 20px;
+    position: sticky; top: 0; z-index: 999;
+    background: #0f172a;
+    padding: 12px 8px 10px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-left: -1rem; margin-right: -1rem;
 }
 .steps-bar::before {
     content: ''; position: absolute; top: 18px; left: 10%; right: 10%;
