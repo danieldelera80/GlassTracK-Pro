@@ -1,7 +1,7 @@
 import re
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import text
 import csv
 from pathlib import Path
@@ -24,22 +24,18 @@ try:
 except ImportError:
     PYZBAR_DISPONIBLE = False
 
-# Cámara siempre disponible (la foto se usa como referencia visual)
 CAMARA_DISPONIBLE = True
 
 SECTOR_ENTREGA = "Entrega"
 SECTOR_TERMINADO = "Terminado"
 
-# ── Utilidad: normalizar prefijos [URGENTE]/[INCIDENCIA] ─────────────────────
 _PFX_RE = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
 
+def _now_utc():
+    """Siempre UTC — funciona igual en Streamlit Cloud (EE.UU.) y en la PC local."""
+    return datetime.now(timezone.utc)
+
 def _normalizar_df_ordenes(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Unifica 'orden' y '[URGENTE] orden' como el mismo pedido físico:
-    - Extrae el número base quitando prefijos
-    - Si algún registro tiene [URGENTE], todos adoptan ese prefijo
-    - Dedup por nombre normalizado, conservando el registro más reciente
-    """
     if df.empty:
         return df
     df = df.copy()
@@ -67,14 +63,14 @@ def _normalizar_df_ordenes(df: pd.DataFrame) -> pd.DataFrame:
 OFFLINE_FILE = Path(__file__).parent.parent / "offline_records.csv"
 
 def guardar_registro_offline(orden: str, carro: int, lado: str, usuario: str, sector: str):
-    """Guarda el registro en un CSV local cuando no hay conexión a Neon."""
     file_exists = OFFLINE_FILE.exists()
     try:
         with open(OFFLINE_FILE, mode='a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             if not file_exists:
                 writer.writerow(["fecha_hora", "orden", "carro", "lado", "usuario", "sector"])
-            writer.writerow([datetime.now().isoformat(), orden.strip(), carro, lado, usuario.strip(), sector])
+            # Guardar siempre en UTC ISO format
+            writer.writerow([_now_utc().isoformat(), orden.strip(), carro, lado, usuario.strip(), sector])
         return True
     except Exception as e:
         print(f"Error escribiendo offline: {e}")
@@ -82,21 +78,22 @@ def guardar_registro_offline(orden: str, carro: int, lado: str, usuario: str, se
 
 def guardar_registro(orden: str, carro: int, lado: str, usuario: str, sector: str):
     import time
-    for intento in range(3):  # hasta 3 reintentos
+    for intento in range(3):
         try:
             with conn.session as s:
                 s.execute(text("""
                     INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
                     VALUES (:f, :o, :c, :l, :u, :s)
                 """), {
-                    "f": datetime.now(), "o": orden.strip(), "c": carro,
+                    # UTC siempre: sin importar desde donde se guarda
+                    "f": _now_utc(), "o": orden.strip(), "c": carro,
                     "l": lado, "u": usuario.strip(), "s": sector
                 })
                 s.commit()
             return True, None
         except Exception as e:
             if intento < 2:
-                time.sleep(2)  # espera 2 segundos y reintenta
+                time.sleep(2)
             else:
                 if guardar_registro_offline(orden, carro, lado, usuario, sector):
                     return True, "OFFLINE"
@@ -105,25 +102,23 @@ def guardar_registro(orden: str, carro: int, lado: str, usuario: str, sector: st
 
 
 def obtener_activos(sector_actual: str):
-    """Consulta la DB para obtener órdenes 'Enviadas a' y 'En Proceso en' de forma eficiente."""
     try:
         query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty: return [], []
 
-        # Normalizar: unifica "22" y "[URGENTE] 22" → 1 fila por pedido real
         df = _normalizar_df_ordenes(df)
 
-        # Pendientes de recibir (Panel A)
         mask_in  = df["sector"].str.strip() == f"Enviado a {sector_actual}"
         res_in   = df[mask_in].copy()
-        res_in["fecha_hora"] = res_in["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+        res_in["fecha_hora"] = pd.to_datetime(res_in["fecha_hora"], utc=True)\
+            .dt.tz_convert("America/Argentina/Buenos_Aires").dt.strftime("%Y-%m-%d %H:%M")
 
-        # Ya recibidas / En proceso (Panel B)
         mask_pro = df["sector"].str.strip() == f"En Proceso en {sector_actual}"
         res_pro  = df[mask_pro].copy()
-        res_pro["fecha_hora"] = res_pro["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+        res_pro["fecha_hora"] = pd.to_datetime(res_pro["fecha_hora"], utc=True)\
+            .dt.tz_convert("America/Argentina/Buenos_Aires").dt.strftime("%Y-%m-%d %H:%M")
 
         return res_in.to_dict("records"), res_pro.to_dict("records")
     except Exception as e:
@@ -131,19 +126,18 @@ def obtener_activos(sector_actual: str):
         return [], []
 
 def obtener_pendientes_entrega():
-    """Obtiene las órdenes que ya pasaron por Terminado y esperan entrega al cliente."""
     try:
         query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty: return []
 
-        # Normalizar: unifica versiones con/sin prefijo
         df = _normalizar_df_ordenes(df)
 
         mask = (df["sector"].str.strip() == SECTOR_TERMINADO) | (df["sector"].str.strip() == f"Enviado a {SECTOR_ENTREGA}")
         res  = df[mask].copy()
-        res["fecha_hora"] = res["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+        res["fecha_hora"] = pd.to_datetime(res["fecha_hora"], utc=True)\
+            .dt.tz_convert("America/Argentina/Buenos_Aires").dt.strftime("%Y-%m-%d %H:%M")
         return res.to_dict("records")
     except Exception as e:
         print(f"Error obtener_pendientes_entrega: {e}")
@@ -151,16 +145,8 @@ def obtener_pendientes_entrega():
 
 
 def resolver_nombre_orden(orden_base: str) -> str:
-    """
-    Devuelve el nombre canónico de la orden en el sistema:
-    - Si existe como '[URGENTE] X' → retorna '[URGENTE] X' (misma pieza, urgente)
-    - Si existe como '[INCIDENCIA] X' → retorna '[INCIDENCIA] X'
-    - Si ya existe como 'X' (pieza física duplicada) → retorna 'X - N+1'
-    - Si no existe → retorna 'X' (pieza nueva)
-    Usa queries parametrizadas para evitar SQL injection.
-    """
     try:
-        base = _PFX_RE.sub("", orden_base).strip()  # quitar prefijo si el escáner lo incluía
+        base = _PFX_RE.sub("", orden_base).strip()
         df = conn.query(
             "SELECT DISTINCT orden FROM registros "
             "WHERE TRIM(orden) = :base "
@@ -181,19 +167,17 @@ def resolver_nombre_orden(orden_base: str) -> str:
         )
 
         if df.empty:
-            return orden_base  # nueva pieza, no existe en el sistema
+            return orden_base
 
         ordenes = [str(o).strip() for o in df["orden"].values]
 
-        # Prioridad: si la pieza ya tiene prefijo urgente/incidencia, usar ese nombre
         for o in ordenes:
             if "[URGENTE]" in o.upper() and " - " not in o:
-                return o  # "[URGENTE] 22" → misma pieza, retorna nombre canónico
+                return o
         for o in ordenes:
             if "[INCIDENCIA]" in o.upper() and " - " not in o:
                 return o
 
-        # Pieza duplicada físicamente (mismo número, distintas unidades)
         cantidad = len(df)
         return f"{base} - {cantidad + 1}"
     except Exception as e:
@@ -202,7 +186,6 @@ def resolver_nombre_orden(orden_base: str) -> str:
 
 
 def decodificar_imagen(img_bytes) -> str | None:
-    """Intenta decodificar un código de barras con pyzbar (si está disponible)."""
     if not PYZBAR_DISPONIBLE:
         return None
     try:
@@ -217,7 +200,6 @@ def decodificar_imagen(img_bytes) -> str | None:
 
 
 def obtener_carro_lado(orden: str):
-    """Retorna (carro, lado) del último registro de la orden (busca con y sin prefijo)."""
     try:
         base = _PFX_RE.sub("", orden).strip()
         df = conn.query(
@@ -235,20 +217,18 @@ def obtener_carro_lado(orden: str):
 
 
 def procesar_orden(valor: str):
-    """Evalúa la orden, genera sub-piezas si es necesario, y avanza al paso siguiente."""
     if not valor.strip():
         return
 
-    orden_limpia  = valor.strip()
+    orden_limpia   = valor.strip()
     orden_resuelta = resolver_nombre_orden(orden_limpia)
 
     st.session_state.orden_val = orden_resuelta
 
-    # Pre-cargar Carro y Lado del sector anterior (si existen)
     carro_p, lado_p = obtener_carro_lado(orden_resuelta)
     st.session_state.carro_previo  = carro_p
     st.session_state.lado_previo   = lado_p
-    st.session_state.paso3_fresh   = True   # señal para pre-llenar widgets
+    st.session_state.paso3_fresh   = True
 
     if st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRECTO:
         st.session_state.entrega_lista = True
@@ -338,13 +318,9 @@ es_terminado = st.session_state.sector_confirmado == SECTOR_TERMINADO
 
 render_steps(st.session_state.paso, get_step_labels())
 
-# ── Alerta de órdenes urgentes activas (filtrada por sector del operario) ─────
-# Solo visible cuando el operario ya confirmó su sector (paso >= 2)
 if st.session_state.paso >= 2:
     try:
         _sector_op = st.session_state.sector_confirmado
-        # Sectores que "pertenecen" al operario actual:
-        # la orden está en su sector exacto, en proceso en él, o fue enviada a él
         _sectores_visibles = {
             _sector_op,
             f"En Proceso en {_sector_op}",
@@ -356,7 +332,6 @@ if st.session_state.paso >= 2:
             ttl=30
         )
         if _df_urg_sector is not None and not _df_urg_sector.empty:
-            # Filtrar: solo órdenes cuyo sector actual pertenece a este operario
             _df_urg_sector = _df_urg_sector[
                 _df_urg_sector["sector"].str.strip().isin(_sectores_visibles)
             ]
@@ -376,7 +351,7 @@ if st.session_state.paso >= 2:
                 </div>
                 """, unsafe_allow_html=True)
     except Exception:
-        pass  # Si falla la consulta, no interrumpir el flujo del formulario
+        pass
 
 paso = st.session_state.paso
 
@@ -420,7 +395,6 @@ elif paso == 1:
 elif paso == 2:
     render_contexto(st.session_state.op_confirmado, st.session_state.sector_confirmado)
 
-    # ── Auto-guardar para Entrega / Terminado ──────────────────────────────────
     if st.session_state.entrega_lista:
         st.session_state.entrega_lista = False
         success, error = guardar_registro(
@@ -442,7 +416,6 @@ elif paso == 2:
         else:
             st.session_state.reg_error = error
 
-    # ── Título según sector ──────────────────────────────────────────────────
     if es_terminado:
         st.markdown("### ⏳ Escaneá la orden terminada")
         st.markdown("""
@@ -462,7 +435,6 @@ elif paso == 2:
     else:
         st.markdown("### 🔢 Escaneá la orden")
 
-    # ── Toggle modo escáner / cámara ────────────────────────────────────────
     col_t, col_c = st.columns(2)
     with col_t:
         if st.button(
@@ -482,7 +454,6 @@ elif paso == 2:
             st.rerun()
     st.write("")
 
-    # ── Modo texto ───────────────────────────────────────────────────────────
     if not st.session_state.modo_camara:
         ord_key = f"_inp_ord_{st.session_state.ord_n}"
         st.text_input(
@@ -495,8 +466,6 @@ elif paso == 2:
             st.caption("✅ Al escanear se registra y entrega automáticamente.")
         else:
             st.caption("Avanza automáticamente al presionar Enter.")
-
-    # ── Modo cámara: foto + entrada manual del código visible ────────────
     else:
         st.caption("📸 Sacá foto a la etiqueta y escribí el número que ves.")
         foto = st.camera_input(
@@ -542,11 +511,9 @@ elif paso == 2:
         st.session_state.paso = 1
         st.rerun()
 
-    # ── Error de guardado ──────────────────────────────────────────────────
     if st.session_state.reg_error:
         st.error(f"❌ Error al guardar: {st.session_state.reg_error}")
 
-    # ── Panel éxito del registro anterior ─────────────────────────────────────────
     if st.session_state.ultimo:
         u = st.session_state.ultimo
         if u["sector"] == SECTOR_ENTREGA:
@@ -565,7 +532,7 @@ elif paso == 2:
                 extra = '<div style="font-size:13px; color:#f0c040; margin-top:8px;">⏳ Enviado a Terminado</div>'
             else:
                 extra = f'<div style="font-size:13px; color:#4ade80; margin-top:8px;">📤 Enviado a: {envio}</div>'
-                
+
         if u.get("offline"):
             extra += '<div style="font-size:14px; font-weight:bold; color:#f97316; margin-top:10px; border: 1px solid #f97316; padding: 6px; border-radius: 6px; text-align:center;">⚠️ Guardado en Caché Local (Sin Internet)</div>'
 
@@ -578,8 +545,7 @@ elif paso == 2:
             </div>
             {extra}
         </div>""", unsafe_allow_html=True)
-        
-        # Emitir el BEEP sonoro de éxito de forma oculta
+
         beep_path = Path(__file__).parent.parent / "beep.wav"
         if beep_path.exists():
             import base64
@@ -587,19 +553,16 @@ elif paso == 2:
                 b64 = base64.b64encode(f.read()).decode()
             st.markdown(f'<audio autoplay="true" style="display:none;"><source src="data:audio/wav;base64,{b64}" type="audio/wav"></audio>', unsafe_allow_html=True)
 
-
-    # ── TABLERO KANBAN DE PLANTA ────────────────────────────────────────────
     st.markdown("<hr style='margin: 30px 0 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
 
     if not es_terminado and not es_entrega:
         entrantes, en_proceso = obtener_activos(st.session_state.sector_confirmado)
-        
+
         tab_pendientes, tab_proceso = st.tabs([
-            f"📥 PENDIENTES ({len(entrantes)})", 
+            f"📥 PENDIENTES ({len(entrantes)})",
             f"⚙️ EN PROCESO ({len(en_proceso)})"
         ])
-        
-        # PANEL A: PENDIENTES DE RECIBIR
+
         with tab_pendientes:
             if not entrantes:
                 st.info("No hay órdenes entrantes.")
@@ -621,8 +584,8 @@ elif paso == 2:
                         """, unsafe_allow_html=True)
                         if st.button(f"↘️ TOMAR PIEZA {row['orden']}", key=f"rec_{row['orden']}", use_container_width=True):
                             success, error = guardar_registro(
-                                row['orden'], row.get('carro', 0), row.get('lado', '-'), 
-                                st.session_state.op_confirmado, 
+                                row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                st.session_state.op_confirmado,
                                 f"En Proceso en {st.session_state.sector_confirmado}"
                             )
                             if success:
@@ -633,8 +596,7 @@ elif paso == 2:
                                 st.rerun()
                             else:
                                 st.error(error)
-                
-        # PANEL B: EN PROCESO (Listas para finalizar)
+
         with tab_proceso:
             if not en_proceso:
                 st.info("No tenés piezas en tu mesa.")
@@ -661,10 +623,7 @@ elif paso == 2:
                             st.session_state.paso3_fresh  = True
                             st.session_state.paso         = 3
                             st.rerun()
-                            
 
-
-    # ── KANBAN DE ENTREGA ───────────────────────────────────────────────────
     if es_entrega:
         pendientes_entrega = obtener_pendientes_entrega()
         st.markdown(f"#### 📥 LISTAS PARA ENTREGAR ({len(pendientes_entrega)})")
@@ -691,24 +650,20 @@ elif paso == 2:
                             st.rerun()
 
 
-
 # ──────────────────────────────────────────────────────────────────────────────
-#  PASO 3 — Carro + Lado (solo sectores de producción, nunca Entrega)
+#  PASO 3 — Carro + Lado
 # ──────────────────────────────────────────────────────────────────────────────
 elif paso == 3:
     render_contexto(st.session_state.op_confirmado, st.session_state.sector_confirmado)
 
-    # ── Pre-llenar widgets con datos del sector anterior (solo al entrar) ──
     _LADOS = ["A", "B", "Ambos"]
     if st.session_state.get("paso3_fresh", False):
         _cp_init = st.session_state.carro_previo
         _lp_init = st.session_state.lado_previo if st.session_state.lado_previo in _LADOS else "A"
-        # Pre-llenar la sección DESPACHAR (keys fijas _d)
         st.session_state["_inp_carro_d"] = str(_cp_init) if _cp_init > 0 else ""
         st.session_state["_sel_lado_d"]  = _lp_init
         st.session_state.paso3_fresh     = False
 
-    # ── Badge de orden ──────────────────────────────────────────────────────
     st.markdown(f"""
     <div style="background:#0d1f3c; border:1px solid #1e3a6a; border-radius:12px;
                 padding:14px 18px; margin-bottom:16px; text-align:center;">
@@ -720,7 +675,6 @@ elif paso == 3:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Panel informativo: datos que vienen del sector anterior ────────────
     _cp = st.session_state.carro_previo
     _lp = st.session_state.lado_previo
     tiene_datos_previos = _cp > 0
@@ -740,7 +694,6 @@ elif paso == 3:
         </div>
         """, unsafe_allow_html=True)
 
-    # ── Verificar si la pieza ya fue tomada en este sector ─────────────────
     pieza_ya_tomada = False
     try:
         res_chk = conn.query(
@@ -754,12 +707,10 @@ elif paso == 3:
 
     st.write("")
 
-    # ── ACCIÓN 1: TOMAR PIEZA ───────────────────────────────────────────────
     if not pieza_ya_tomada:
         st.markdown("#### 1. Iniciar Trabajo")
 
         if tiene_datos_previos:
-            # 1 solo click — usa automáticamente los datos del sector anterior
             st.caption(f"Se usará Carro {_cp} · Lado {_lp} (del sector anterior).")
             if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True, key="btn_tomar_prev"):
                 success, error = guardar_registro(
@@ -779,7 +730,6 @@ elif paso == 3:
                 else:
                     st.session_state.reg_error = error
         else:
-            # Orden nueva — pedir carro/lado (keys fijas _inp_carro_t / _sel_lado_t)
             col_car_t, col_lad_t = st.columns(2)
             with col_car_t:
                 st.markdown("**🛒 Carro**")
@@ -814,7 +764,6 @@ elif paso == 3:
 
         st.markdown("<hr style='margin: 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
 
-    # ── ACCIÓN 2: DESPACHAR — keys siempre fijas _inp_carro_d / _sel_lado_d ──
     titulo_acc2 = "Despachar Pieza" if pieza_ya_tomada else "2. Despachar Pieza (Finalizar)"
     st.markdown(f"#### {titulo_acc2}")
 
@@ -823,7 +772,6 @@ elif paso == 3:
         st.markdown("**🛒 Carro**")
         carro_str = st.text_input("Carro", key="_inp_carro_d",
             placeholder="Número de carro...", label_visibility="collapsed")
-        # Si el campo está vacío, usar el valor previo como fallback
         _carro_efectivo = carro_str.strip() if carro_str.strip() else (str(_cp) if _cp > 0 else "")
         carro_valido = _carro_efectivo.isdigit() and int(_carro_efectivo) >= 1
         if carro_str.strip() and not carro_valido:
