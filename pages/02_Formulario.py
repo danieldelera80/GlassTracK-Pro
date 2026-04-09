@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -30,6 +31,35 @@ CAMARA_DISPONIBLE = True
 
 SECTOR_ENTREGA = "Entrega"
 SECTOR_TERMINADO = "Terminado"
+
+# ── Utilidad: normalizar prefijos [URGENTE]/[INCIDENCIA] ─────────────────────
+_PFX_RE = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
+
+def _normalizar_df_ordenes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Unifica 'orden' y '[URGENTE] orden' como el mismo pedido físico:
+    - Extrae el número base quitando prefijos
+    - Si algún registro tiene [URGENTE], todos adoptan ese prefijo
+    - Dedup por nombre normalizado, conservando el registro más reciente
+    """
+    if df.empty:
+        return df
+    df = df.copy()
+    df["orden"] = df["orden"].astype(str).str.strip()
+    df["_base"] = df["orden"].apply(lambda x: _PFX_RE.sub("", x).strip())
+    bases_urg = set(df.loc[df["orden"].str.contains(r'\[URGENTE\]',    case=False, na=False), "_base"])
+    bases_inc = set(df.loc[df["orden"].str.contains(r'\[INCIDENCIA\]', case=False, na=False), "_base"]) - bases_urg
+
+    def _norm(row):
+        b = row["_base"]
+        if b in bases_urg: return f"[URGENTE] {b}"
+        if b in bases_inc: return f"[INCIDENCIA] {b}"
+        return b
+
+    df["orden"] = df.apply(_norm, axis=1)
+    df = (df.sort_values("fecha_hora", ascending=False)
+            .drop_duplicates(subset=["orden"], keep="first"))
+    return df.drop(columns=["_base"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -79,22 +109,25 @@ def guardar_registro(orden: str, carro: int, lado: str, usuario: str, sector: st
 def obtener_activos(sector_actual: str):
     """Consulta la DB para obtener órdenes 'Enviadas a' y 'En Proceso en' de forma eficiente."""
     try:
-        query = "SELECT DISTINCT ON (orden) orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY orden, fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty: return [], []
-        
+
+        # Normalizar: unifica "22" y "[URGENTE] 22" → 1 fila por pedido real
+        df = _normalizar_df_ordenes(df)
+
         # Pendientes de recibir (Panel A)
-        mask_in = df["sector"].str.strip() == f"Enviado a {sector_actual}"
-        res_in = df[mask_in].copy()
-        res_in['fecha_hora'] = res_in['fecha_hora'].dt.strftime("%Y-%m-%d %H:%M")
-        
+        mask_in  = df["sector"].str.strip() == f"Enviado a {sector_actual}"
+        res_in   = df[mask_in].copy()
+        res_in["fecha_hora"] = res_in["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+
         # Ya recibidas / En proceso (Panel B)
         mask_pro = df["sector"].str.strip() == f"En Proceso en {sector_actual}"
-        res_pro = df[mask_pro].copy()
-        res_pro['fecha_hora'] = res_pro['fecha_hora'].dt.strftime("%Y-%m-%d %H:%M")
-        
-        return res_in.to_dict('records'), res_pro.to_dict('records')
+        res_pro  = df[mask_pro].copy()
+        res_pro["fecha_hora"] = res_pro["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+
+        return res_in.to_dict("records"), res_pro.to_dict("records")
     except Exception as e:
         print(f"Error obtener_activos: {e}")
         return [], []
@@ -102,15 +135,18 @@ def obtener_activos(sector_actual: str):
 def obtener_pendientes_entrega():
     """Obtiene las órdenes que ya pasaron por Terminado y esperan entrega al cliente."""
     try:
-        query = "SELECT DISTINCT ON (orden) orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY orden, fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty: return []
-        
+
+        # Normalizar: unifica versiones con/sin prefijo
+        df = _normalizar_df_ordenes(df)
+
         mask = (df["sector"].str.strip() == SECTOR_TERMINADO) | (df["sector"].str.strip() == f"Enviado a {SECTOR_ENTREGA}")
-        res = df[mask].copy()
-        res['fecha_hora'] = res['fecha_hora'].dt.strftime("%Y-%m-%d %H:%M")
-        return res.to_dict('records')
+        res  = df[mask].copy()
+        res["fecha_hora"] = res["fecha_hora"].dt.strftime("%Y-%m-%d %H:%M")
+        return res.to_dict("records")
     except Exception as e:
         print(f"Error obtener_pendientes_entrega: {e}")
         return []
