@@ -247,47 +247,45 @@ es_terminado = st.session_state.sector_confirmado == SECTOR_TERMINADO
 st.markdown("## 📋 Carga de Producción")
 render_steps(st.session_state.paso, get_step_labels())
 
-# ── Alerta de órdenes urgentes activas ───────────────────────────────────────
-try:
-    _df_urg = conn.query(
-        "SELECT DISTINCT orden FROM registros WHERE orden ILIKE '%[URGENTE]%' ORDER BY orden",
-        ttl=30
-    )
-    if _df_urg is not None and not _df_urg.empty:
-        # Filtrar solo las que no fueron entregadas (último estado != Entrega)
-        _df_estados = conn.query(
-            "SELECT DISTINCT ON (orden) orden, sector FROM registros ORDER BY orden, fecha_hora DESC",
-            ttl=30
-        )
-        _entregadas_form = set()
-        if _df_estados is not None and not _df_estados.empty:
-            _entregadas_form = set(
-                _df_estados[_df_estados["sector"] == "Entrega"]["orden"].tolist()
-            )
+# ── Alerta de órdenes urgentes activas (filtrada por sector del operario) ─────
+# Solo visible cuando el operario ya confirmó su sector (paso >= 2)
+if st.session_state.paso >= 2:
+    try:
+        _sector_op = st.session_state.sector_confirmado
+        # Sectores que "pertenecen" al operario actual:
+        # la orden está en su sector exacto, en proceso en él, o fue enviada a él
+        _sectores_visibles = {
+            _sector_op,
+            f"En Proceso en {_sector_op}",
+            f"Enviado a {_sector_op}",
+        }
         _df_urg_sector = conn.query(
             "SELECT DISTINCT ON (orden) orden, sector FROM registros "
             "WHERE orden ILIKE '%[URGENTE]%' ORDER BY orden, fecha_hora DESC",
             ttl=30
         )
-        for _, _urg_row in _df_urg_sector.iterrows():
-            _urg_orden = _urg_row["orden"]
-            if _urg_orden in _entregadas_form:
-                continue
-            _urg_sector = _urg_row["sector"]
-            st.markdown(f"""
-            <div class="alerta-urgente">
-                <span style="font-size:28px; flex-shrink:0;">🚨</span>
-                <div>
-                    <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
-                    <div class="alerta-urgente-ordenes">{_urg_orden}</div>
-                    <div style="font-size:12px; color:#fca5a5; margin-top:4px;">
-                        📍 Sector actual: <b>{_urg_sector}</b>
+        if _df_urg_sector is not None and not _df_urg_sector.empty:
+            # Filtrar: solo órdenes cuyo sector actual pertenece a este operario
+            _df_urg_sector = _df_urg_sector[
+                _df_urg_sector["sector"].str.strip().isin(_sectores_visibles)
+            ]
+            for _, _urg_row in _df_urg_sector.iterrows():
+                _urg_orden = _urg_row["orden"]
+                _urg_sector = _urg_row["sector"].strip()
+                st.markdown(f"""
+                <div class="alerta-urgente">
+                    <span style="font-size:28px; flex-shrink:0;">🚨</span>
+                    <div>
+                        <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
+                        <div class="alerta-urgente-ordenes">{_urg_orden}</div>
+                        <div style="font-size:12px; color:#fca5a5; margin-top:4px;">
+                            📍 Sector actual: <b>{_urg_sector}</b>
+                        </div>
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-except Exception:
-    pass  # Si falla la consulta, no interrumpir el flujo del formulario
+                """, unsafe_allow_html=True)
+    except Exception:
+        pass  # Si falla la consulta, no interrumpir el flujo del formulario
 
 paso = st.session_state.paso
 
@@ -516,11 +514,15 @@ elif paso == 2:
                 st.info("No hay órdenes entrantes.")
             else:
                 for row in entrantes:
+                    _es_urgente = "[URGENTE]" in str(row['orden']).upper()
+                    _bg   = "#2d0a0a" if _es_urgente else "#1e293b"
+                    _bord = "#ef4444" if _es_urgente else "#3b82f6"
+                    _badge = ' <span style="background:#ef4444;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;font-weight:bold;margin-left:6px;">⚡ URGENTE</span>' if _es_urgente else ""
                     with st.container():
                         st.markdown(f"""
-                        <div style="background:#1e293b; border-left:4px solid #3b82f6; border-radius:6px; padding:12px; margin-bottom:10px;">
+                        <div style="background:{_bg}; border-left:4px solid {_bord}; border-radius:6px; padding:12px; margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:start;">
-                                <span style="font-size:18px; font-weight:bold; color:#60a5fa;">📄 {row['orden']}</span>
+                                <span style="font-size:18px; font-weight:bold; color:#60a5fa;">📄 {row['orden']}{_badge}</span>
                                 <span style="font-size:13px; color:#cbd5e1; background:#0f172a; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
                             </div>
                             <div style="font-size:12px; color:#94a3b8; margin-top:6px;">Enviado por: {row['usuario']} — {row['fecha_hora']}</div>
@@ -547,11 +549,15 @@ elif paso == 2:
                 st.info("No tenés piezas en tu mesa.")
             else:
                 for row in en_proceso:
+                    _es_urgente = "[URGENTE]" in str(row['orden']).upper()
+                    _bg   = "#2d0a0a" if _es_urgente else "#1f1605"
+                    _bord = "#ef4444" if _es_urgente else "#eab308"
+                    _badge = ' <span style="background:#ef4444;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;font-weight:bold;margin-left:6px;">⚡ URGENTE</span>' if _es_urgente else ""
                     with st.container():
                         st.markdown(f"""
-                        <div style="background:#1f1605; border-left:4px solid #eab308; border-radius:6px; padding:12px; margin-bottom:10px;">
+                        <div style="background:{_bg}; border-left:4px solid {_bord}; border-radius:6px; padding:12px; margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:start;">
-                                <span style="font-size:18px; font-weight:bold; color:#facc15;">⚙️ {row['orden']}</span>
+                                <span style="font-size:18px; font-weight:bold; color:#facc15;">⚙️ {row['orden']}{_badge}</span>
                                 <span style="font-size:13px; color:#fde047; background:#422006; padding:2px 6px; border-radius:4px;">🛒 {row['carro']} | ↔️ {row['lado']}</span>
                             </div>
                             <div style="font-size:12px; color:#a1a1aa; margin-top:6px;">Iniciado el: {row['fecha_hora']}</div>
