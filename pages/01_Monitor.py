@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Argentina = UTC-3 (sin horario de verano)
+_ARG_TZ = timezone(timedelta(hours=-3))
 from streamlit_autorefresh import st_autorefresh
 from sqlalchemy import text
 
@@ -85,7 +88,12 @@ def cargar_datos():
     if df_total is None or df_total.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), set(), set(), set()
 
-    df_total["fecha_hora"] = pd.to_datetime(df_total["fecha_hora"])
+    # Normalizar a hora Argentina (UTC-3), sin info de zona horaria
+    df_total["fecha_hora"] = (
+        pd.to_datetime(df_total["fecha_hora"], utc=True)
+        .dt.tz_convert("America/Argentina/Buenos_Aires")
+        .dt.tz_localize(None)
+    )
     df_total["orden"] = df_total["orden"].astype(str).str.strip()
 
     df_entrega   = df_total[df_total["sector"] == "Entrega"].copy()
@@ -114,7 +122,7 @@ def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas:
         return df
 
     col_estado = "Estado" if "Estado" in df.columns else None
-    ahora = datetime.now()
+    ahora = datetime.now(_ARG_TZ).replace(tzinfo=None)  # hora Argentina sin tz
 
     def estilo_fila(row):
         orden        = str(row.get("Orden", "")).strip()
@@ -130,14 +138,11 @@ def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas:
         if sector_str.startswith("Enviado a") and fecha_val is not pd.NaT:
             try:
                 if isinstance(fecha_val, str):
-                    fecha_val = pd.to_datetime(fecha_val)
-                if fecha_val.tzinfo is not None:
-                    ahora_tz = ahora.astimezone(fecha_val.tzinfo)
-                    delta = (ahora_tz - fecha_val).total_seconds()
-                else:
+                    fecha_val = pd.to_datetime(fecha_val, format="%d/%m/%Y %H:%M", errors="coerce")
+                if fecha_val is not None and not pd.isna(fecha_val):
                     delta = (ahora - fecha_val).total_seconds()
-                if delta > 30 * 60:
-                    parpadeo = True
+                    if delta > 30 * 60:
+                        parpadeo = True
             except:
                 pass
 
@@ -322,7 +327,7 @@ except Exception as e:
     st.error(f"❌ Error al conectar con la base de datos: {e}")
     st.stop()
 
-hoy = datetime.now().date()
+hoy = datetime.now(_ARG_TZ).date()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -442,6 +447,8 @@ with tab_prod:
             return ""
 
         df_vista["Estado"] = df_vista.apply(calcular_estado, axis=1)
+        # Formatear fecha para display: "DD/MM/YYYY HH:MM" sin microsegundos
+        df_vista["fecha_hora"] = df_vista["fecha_hora"].dt.strftime("%d/%m/%Y %H:%M")
 
         df_vista = df_vista.rename(columns={
             "orden":      "Orden",
