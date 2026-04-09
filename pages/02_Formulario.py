@@ -2,9 +2,7 @@ import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from PIL import Image
 from sqlalchemy import text
-import os
 import csv
 from pathlib import Path
 
@@ -185,18 +183,36 @@ def decodificar_imagen(img_bytes) -> str | None:
         return None
 
 
+def obtener_carro_lado(orden: str):
+    """Retorna (carro, lado) del último registro de la orden, o (0, 'A') si no hay datos."""
+    try:
+        df = conn.query(
+            "SELECT carro, lado FROM registros WHERE TRIM(orden) = :ord ORDER BY fecha_hora DESC LIMIT 1",
+            params={"ord": orden.strip()}, ttl=0
+        )
+        if not df.empty:
+            return int(df.iloc[0]["carro"] or 0), str(df.iloc[0]["lado"] or "A")
+    except:
+        pass
+    return 0, "A"
+
+
 def procesar_orden(valor: str):
     """Evalúa la orden, genera sub-piezas si es necesario, y avanza al paso siguiente."""
     if not valor.strip():
         return
-        
-    orden_limpia = valor.strip()
-    
-    # 🔥 MAGIA: Si la orden ya existe (la física), la clonamos virtualmente con un sufijo "- 2", "- 3", etc.
+
+    orden_limpia  = valor.strip()
     orden_resuelta = resolver_nombre_orden(orden_limpia)
-    
+
     st.session_state.orden_val = orden_resuelta
-    
+
+    # Pre-cargar Carro y Lado del sector anterior (si existen)
+    carro_p, lado_p = obtener_carro_lado(orden_resuelta)
+    st.session_state.carro_previo  = carro_p
+    st.session_state.lado_previo   = lado_p
+    st.session_state.paso3_fresh   = True   # señal para pre-llenar widgets
+
     if st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRECTO:
         st.session_state.entrega_lista = True
     else:
@@ -219,6 +235,9 @@ _DEFAULTS = {
     "entrega_lista":     False,
     "ir_a_terminado":    False,
     "ir_a_danado":       False,
+    "carro_previo":      0,
+    "lado_previo":       "A",
+    "paso3_fresh":       False,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -599,9 +618,11 @@ elif paso == 2:
                         </div>
                         """, unsafe_allow_html=True)
                         if st.button(f"📤 DESPACHAR {row['orden']}", key=f"fin_{row['orden']}", use_container_width=True):
-                            # Salta automáticamente al Paso 3 para elegir carro y destino
-                            st.session_state.orden_val = row['orden']
-                            st.session_state.paso = 3
+                            st.session_state.orden_val    = row['orden']
+                            st.session_state.carro_previo = int(row.get('carro') or 0)
+                            st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                            st.session_state.paso3_fresh  = True
+                            st.session_state.paso         = 3
                             st.rerun()
                             
 
@@ -640,9 +661,19 @@ elif paso == 2:
 elif paso == 3:
     render_contexto(st.session_state.op_confirmado, st.session_state.sector_confirmado)
 
+    # ── Pre-llenar widgets con datos del sector anterior (solo al entrar) ──
+    _LADOS = ["A", "B", "Ambos"]
+    if st.session_state.get("paso3_fresh", False):
+        _cp = st.session_state.carro_previo
+        _lp = st.session_state.lado_previo if st.session_state.lado_previo in _LADOS else "A"
+        st.session_state["_inp_carro"] = str(_cp) if _cp > 0 else ""
+        st.session_state["_sel_lado"]  = _lp
+        st.session_state.paso3_fresh   = False
+
+    # ── Badge de orden ──────────────────────────────────────────────────────
     st.markdown(f"""
     <div style="background:#0d1f3c; border:1px solid #1e3a6a; border-radius:12px;
-                padding:14px 18px; margin-bottom:20px; text-align:center;">
+                padding:14px 18px; margin-bottom:16px; text-align:center;">
         <div style="font-size:12px; color:#4a6a9a; text-transform:uppercase;
                     letter-spacing:1.5px; margin-bottom:4px;">Orden detectada</div>
         <div style="font-size:28px; font-weight:900; color:#4a90d9; letter-spacing:2px;">
@@ -651,125 +682,160 @@ elif paso == 3:
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Panel informativo: datos que vienen del sector anterior ────────────
+    _cp = st.session_state.carro_previo
+    _lp = st.session_state.lado_previo
+    tiene_datos_previos = _cp > 0
+
+    if tiene_datos_previos:
+        st.markdown(f"""
+        <div style="background:#0f2336; border-left:4px solid #3b82f6; border-radius:8px;
+                    padding:10px 16px; margin-bottom:16px; display:flex; align-items:center; gap:16px;">
+            <span style="font-size:22px;">📦</span>
+            <div>
+                <div style="font-size:11px; color:#4a6a9a; text-transform:uppercase;
+                            letter-spacing:1px;">Datos del sector anterior</div>
+                <div style="font-size:18px; font-weight:700; color:#93c5fd; margin-top:2px;">
+                    🛒 Carro {_cp} &nbsp;·&nbsp; ↔️ Lado {_lp}
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── Verificar si la pieza ya fue tomada en este sector ─────────────────
+    pieza_ya_tomada = False
+    try:
+        res_chk = conn.query(
+            "SELECT sector FROM registros WHERE TRIM(orden) = :ord ORDER BY fecha_hora DESC LIMIT 1",
+            params={"ord": st.session_state.orden_val.strip()}, ttl=0
+        )
+        if not res_chk.empty:
+            if res_chk.iloc[0]["sector"].strip() == f"En Proceso en {st.session_state.sector_confirmado}":
+                pieza_ya_tomada = True
+    except: pass
+
+    st.write("")
+
+    # ── ACCIÓN 1: TOMAR PIEZA ───────────────────────────────────────────────
+    if not pieza_ya_tomada:
+        st.markdown("#### 1. Iniciar Trabajo")
+
+        if tiene_datos_previos:
+            # Un solo click — usa automáticamente los datos del sector anterior
+            st.caption(f"Se usará Carro {_cp} · Lado {_lp} (del sector anterior). Sin necesidad de re-ingresar.")
+            if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True):
+                success, error = guardar_registro(
+                    st.session_state.orden_val, _cp, _lp,
+                    st.session_state.op_confirmado,
+                    f"En Proceso en {st.session_state.sector_confirmado}"
+                )
+                if success:
+                    st.session_state.ultimo = {
+                        "orden": st.session_state.orden_val, "sector": st.session_state.sector_confirmado,
+                        "op": st.session_state.op_confirmado, "enviado_a": None, "offline": (error == "OFFLINE")
+                    }
+                    st.session_state.orden_val = ""; st.session_state.es_dup = False
+                    st.session_state.ord_n += 1; st.session_state.reg_error = None
+                    st.session_state.paso = 2
+                    st.rerun()
+                else:
+                    st.session_state.reg_error = error
+        else:
+            # Orden nueva — hay que ingresar carro/lado para tomar
+            col_car_t, col_lad_t = st.columns(2)
+            with col_car_t:
+                st.markdown("**🛒 Carro**")
+                carro_str_t = st.text_input("Carro", key="_inp_carro",
+                    placeholder="Número de carro...", label_visibility="collapsed")
+                carro_valido_t = carro_str_t.strip().isdigit() and int(carro_str_t.strip()) >= 1
+                if carro_str_t.strip() and not carro_valido_t:
+                    st.caption("⚠️ Ingresá un número válido")
+            with col_lad_t:
+                st.markdown("**↔️ Lado**")
+                lado_t = st.selectbox("Lado", _LADOS, key="_sel_lado", label_visibility="collapsed")
+            if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True, key="btn_tomar_nuevo"):
+                if not carro_valido_t:
+                    st.warning("⚠️ Ingresá el número de carro.")
+                else:
+                    success, error = guardar_registro(
+                        st.session_state.orden_val, int(carro_str_t.strip()), lado_t,
+                        st.session_state.op_confirmado,
+                        f"En Proceso en {st.session_state.sector_confirmado}"
+                    )
+                    if success:
+                        st.session_state.ultimo = {
+                            "orden": st.session_state.orden_val, "sector": st.session_state.sector_confirmado,
+                            "op": st.session_state.op_confirmado, "enviado_a": None, "offline": (error == "OFFLINE")
+                        }
+                        st.session_state.orden_val = ""; st.session_state.es_dup = False
+                        st.session_state.ord_n += 1; st.session_state.reg_error = None
+                        st.session_state.paso = 2
+                        st.rerun()
+                    else:
+                        st.session_state.reg_error = error
+
+        st.markdown("<hr style='margin: 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
+
+    # ── ACCIÓN 2: DESPACHAR ────────────────────────────────────────────────
+    titulo_acc2 = "Despachar Pieza" if pieza_ya_tomada else "2. Despachar Pieza (Finalizar)"
+    st.markdown(f"#### {titulo_acc2}")
+
     col_car, col_lad = st.columns(2)
     with col_car:
         st.markdown("**🛒 Carro**")
-        carro_str = st.text_input(
-            "Carro", key="_inp_carro",
-            placeholder="Número de carro...",
-            label_visibility="collapsed",
-        )
-        carro_valido = carro_str.strip().isdigit() and int(carro_str.strip()) >= 1
+        carro_str = st.text_input("Carro", key="_inp_carro" if not tiene_datos_previos or pieza_ya_tomada else "_inp_carro_d",
+            placeholder="Número de carro...", label_visibility="collapsed")
+        # Si venimos del TOMAR (tiene_datos_previos), el input puede estar ya seteado
+        # Fallback al valor previo si el campo está vacío
+        _carro_efectivo = carro_str.strip() if carro_str.strip() else (str(_cp) if _cp > 0 else "")
+        carro_valido = _carro_efectivo.isdigit() and int(_carro_efectivo) >= 1
         if carro_str.strip() and not carro_valido:
             st.caption("⚠️ Ingresá un número válido")
     with col_lad:
         st.markdown("**↔️ Lado**")
-        lado = st.selectbox("Lado", ["A", "B", "Ambos"],
-                            key="_sel_lado", label_visibility="collapsed")
+        lado = st.selectbox("Lado", _LADOS, key="_sel_lado" if not tiene_datos_previos or pieza_ya_tomada else "_sel_lado_d",
+                            label_visibility="collapsed")
 
-    # ── VERIFICAR DB PARA OCULTAR BOTONES REDUNDANTES ─────────────────
-    pieza_ya_tomada = False
-    try:
-        q_chk = f"SELECT sector FROM registros WHERE orden = '{st.session_state.orden_val}' ORDER BY fecha_hora DESC LIMIT 1"
-        res_chk = conn.query(q_chk, ttl=0)
-        if not res_chk.empty:
-            ult_sec = str(res_chk.iloc[0]["sector"]).strip()
-            estado_base_chk = f"En Proceso en {st.session_state.sector_confirmado}"
-            if ult_sec == estado_base_chk:
-                pieza_ya_tomada = True
-    except: pass
+    opciones_destino = [
+        s for s in SECTORES
+        if s != st.session_state.sector_confirmado and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]
+    ] + [SECTOR_TERMINADO, "Dañado"]
 
-    # ── ACCIONES SEPARADAS PARA NO CONFUNDIR ESTADOS ──────────────────
-    st.write("")
-    
-    # ACCIÓN 1: RECIBIR (Empezar Trabajo) - SOLO visible si NO fue tomada aún
-    if not pieza_ya_tomada:
-        st.markdown("#### 1. Iniciar Trabajo")
-        if st.button("↘️ TOMAR PIEZA (Recibir en mi mesa)", type="secondary", use_container_width=True):
-            if not carro_valido:
-                st.warning("⚠️ Ingresá el número de carro antes de recibir.")
-            else:
-                carro = int(carro_str.strip())
-                estado_base = f"En Proceso en {st.session_state.sector_confirmado}"
-                
-                success, error = guardar_registro(
-                    st.session_state.orden_val, carro, lado,
-                    st.session_state.op_confirmado, estado_base
-                )
-                
-                if success:
-                    st.session_state.ultimo = {
-                        "orden":        st.session_state.orden_val,
-                        "sector":       st.session_state.sector_confirmado,
-                        "op":           st.session_state.op_confirmado,
-                        "enviado_a":    None,
-                        "offline":      (error == "OFFLINE")
-                    }
-                    
-                    st.session_state.orden_val      = ""
-                    st.session_state.es_dup         = False
-                    st.session_state.ord_n         += 1
-                    st.session_state.reg_error      = None
-                    st.session_state.paso           = 2
-                    st.rerun()
-                else:
-                    st.session_state.reg_error = error
-
-        st.markdown("<hr style='margin: 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
-
-    # ACCIÓN 2: ENVIAR (Terminar Trabajo)
-    titulo_acc2 = "Despachar Pieza (Finalizar)" if pieza_ya_tomada else "2. Despachar Pieza (Finalizar)"
-    st.markdown(f"#### {titulo_acc2}")
-    
-    opciones_destino = []
-    for s in SECTORES:
-        if s != st.session_state.sector_confirmado and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]:
-            opciones_destino.append(s)
-    opciones_destino.append(SECTOR_TERMINADO)
-    opciones_destino.append("Dañado")
-    
     destino_sel = st.selectbox("Elegir a quién enviarlo:", opciones_destino, key="_sel_destino")
 
     if st.button("📤 FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
         if not carro_valido:
             st.warning("⚠️ Ingresá el número de carro antes de enviar.")
         else:
-            carro = int(carro_str.strip())
-            # Solo guardamos registro intermedio "En Proceso" si llegó acá por escaneo directo (NO Kanban)
+            carro = int(_carro_efectivo)
             if not pieza_ya_tomada:
-                estado_base = f"En Proceso en {st.session_state.sector_confirmado}"
                 success, error = guardar_registro(
                     st.session_state.orden_val, carro, lado,
-                    st.session_state.op_confirmado, estado_base
+                    st.session_state.op_confirmado,
+                    f"En Proceso en {st.session_state.sector_confirmado}"
                 )
             else:
                 success, error = True, None
-            
+
             if success:
                 es_offline = (error == "OFFLINE")
                 if destino_sel == "Dañado":
-                     _, err_d = guardar_registro(st.session_state.orden_val, carro, lado, st.session_state.op_confirmado, "Dañado")
-                     if err_d == "OFFLINE": es_offline = True
+                    _, err_d = guardar_registro(st.session_state.orden_val, carro, lado, st.session_state.op_confirmado, "Dañado")
+                    if err_d == "OFFLINE": es_offline = True
                 elif destino_sel == SECTOR_TERMINADO:
-                     _, err_t = guardar_registro(st.session_state.orden_val, 0, "-", st.session_state.op_confirmado, SECTOR_TERMINADO)
-                     if err_t == "OFFLINE": es_offline = True
+                    _, err_t = guardar_registro(st.session_state.orden_val, 0, "-", st.session_state.op_confirmado, SECTOR_TERMINADO)
+                    if err_t == "OFFLINE": es_offline = True
                 else:
                     _, err_n = guardar_registro(st.session_state.orden_val, carro, lado, st.session_state.op_confirmado, f"Enviado a {destino_sel}")
                     if err_n == "OFFLINE": es_offline = True
 
                 st.session_state.ultimo = {
-                    "orden":        st.session_state.orden_val,
-                    "sector":       st.session_state.sector_confirmado,
-                    "op":           st.session_state.op_confirmado,
-                    "enviado_a":    destino_sel,
-                    "offline":      es_offline
+                    "orden": st.session_state.orden_val, "sector": st.session_state.sector_confirmado,
+                    "op": st.session_state.op_confirmado, "enviado_a": destino_sel, "offline": es_offline
                 }
-                
-                st.session_state.orden_val      = ""
-                st.session_state.es_dup         = False
-                st.session_state.ord_n         += 1
-                st.session_state.reg_error      = None
-                st.session_state.paso           = 2
+                st.session_state.orden_val = ""; st.session_state.es_dup = False
+                st.session_state.ord_n += 1; st.session_state.reg_error = None
+                st.session_state.paso = 2
                 st.rerun()
             else:
                 st.session_state.reg_error = error
@@ -779,8 +845,6 @@ elif paso == 3:
 
     st.write("")
     if st.button("← Volver a escanear", use_container_width=True):
-        st.session_state.orden_val = ""
-        st.session_state.es_dup    = False
-        st.session_state.ord_n    += 1
-        st.session_state.paso      = 2
+        st.session_state.orden_val = ""; st.session_state.es_dup = False
+        st.session_state.ord_n += 1; st.session_state.paso = 2
         st.rerun()
