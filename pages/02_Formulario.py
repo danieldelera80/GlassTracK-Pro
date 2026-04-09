@@ -664,11 +664,12 @@ elif paso == 3:
     # ── Pre-llenar widgets con datos del sector anterior (solo al entrar) ──
     _LADOS = ["A", "B", "Ambos"]
     if st.session_state.get("paso3_fresh", False):
-        _cp = st.session_state.carro_previo
-        _lp = st.session_state.lado_previo if st.session_state.lado_previo in _LADOS else "A"
-        st.session_state["_inp_carro"] = str(_cp) if _cp > 0 else ""
-        st.session_state["_sel_lado"]  = _lp
-        st.session_state.paso3_fresh   = False
+        _cp_init = st.session_state.carro_previo
+        _lp_init = st.session_state.lado_previo if st.session_state.lado_previo in _LADOS else "A"
+        # Pre-llenar la sección DESPACHAR (keys fijas _d)
+        st.session_state["_inp_carro_d"] = str(_cp_init) if _cp_init > 0 else ""
+        st.session_state["_sel_lado_d"]  = _lp_init
+        st.session_state.paso3_fresh     = False
 
     # ── Badge de orden ──────────────────────────────────────────────────────
     st.markdown(f"""
@@ -721,9 +722,9 @@ elif paso == 3:
         st.markdown("#### 1. Iniciar Trabajo")
 
         if tiene_datos_previos:
-            # Un solo click — usa automáticamente los datos del sector anterior
-            st.caption(f"Se usará Carro {_cp} · Lado {_lp} (del sector anterior). Sin necesidad de re-ingresar.")
-            if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True):
+            # 1 solo click — usa automáticamente los datos del sector anterior
+            st.caption(f"Se usará Carro {_cp} · Lado {_lp} (del sector anterior).")
+            if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True, key="btn_tomar_prev"):
                 success, error = guardar_registro(
                     st.session_state.orden_val, _cp, _lp,
                     st.session_state.op_confirmado,
@@ -741,18 +742,18 @@ elif paso == 3:
                 else:
                     st.session_state.reg_error = error
         else:
-            # Orden nueva — hay que ingresar carro/lado para tomar
+            # Orden nueva — pedir carro/lado (keys fijas _inp_carro_t / _sel_lado_t)
             col_car_t, col_lad_t = st.columns(2)
             with col_car_t:
                 st.markdown("**🛒 Carro**")
-                carro_str_t = st.text_input("Carro", key="_inp_carro",
+                carro_str_t = st.text_input("Carro", key="_inp_carro_t",
                     placeholder="Número de carro...", label_visibility="collapsed")
                 carro_valido_t = carro_str_t.strip().isdigit() and int(carro_str_t.strip()) >= 1
                 if carro_str_t.strip() and not carro_valido_t:
                     st.caption("⚠️ Ingresá un número válido")
             with col_lad_t:
                 st.markdown("**↔️ Lado**")
-                lado_t = st.selectbox("Lado", _LADOS, key="_sel_lado", label_visibility="collapsed")
+                lado_t = st.selectbox("Lado", _LADOS, key="_sel_lado_t", label_visibility="collapsed")
             if st.button("↘️ TOMAR PIEZA", type="secondary", use_container_width=True, key="btn_tomar_nuevo"):
                 if not carro_valido_t:
                     st.warning("⚠️ Ingresá el número de carro.")
@@ -776,25 +777,23 @@ elif paso == 3:
 
         st.markdown("<hr style='margin: 20px 0; border: 1px dashed #334155;'>", unsafe_allow_html=True)
 
-    # ── ACCIÓN 2: DESPACHAR ────────────────────────────────────────────────
+    # ── ACCIÓN 2: DESPACHAR — keys siempre fijas _inp_carro_d / _sel_lado_d ──
     titulo_acc2 = "Despachar Pieza" if pieza_ya_tomada else "2. Despachar Pieza (Finalizar)"
     st.markdown(f"#### {titulo_acc2}")
 
     col_car, col_lad = st.columns(2)
     with col_car:
         st.markdown("**🛒 Carro**")
-        carro_str = st.text_input("Carro", key="_inp_carro" if not tiene_datos_previos or pieza_ya_tomada else "_inp_carro_d",
+        carro_str = st.text_input("Carro", key="_inp_carro_d",
             placeholder="Número de carro...", label_visibility="collapsed")
-        # Si venimos del TOMAR (tiene_datos_previos), el input puede estar ya seteado
-        # Fallback al valor previo si el campo está vacío
+        # Si el campo está vacío, usar el valor previo como fallback
         _carro_efectivo = carro_str.strip() if carro_str.strip() else (str(_cp) if _cp > 0 else "")
         carro_valido = _carro_efectivo.isdigit() and int(_carro_efectivo) >= 1
         if carro_str.strip() and not carro_valido:
             st.caption("⚠️ Ingresá un número válido")
     with col_lad:
         st.markdown("**↔️ Lado**")
-        lado = st.selectbox("Lado", _LADOS, key="_sel_lado" if not tiene_datos_previos or pieza_ya_tomada else "_sel_lado_d",
-                            label_visibility="collapsed")
+        lado = st.selectbox("Lado", _LADOS, key="_sel_lado_d", label_visibility="collapsed")
 
     opciones_destino = [
         s for s in SECTORES
