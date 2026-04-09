@@ -1,25 +1,11 @@
 import streamlit as st
-from config import init_db, verificar_licencia, verificar_estado_sistema
+from config import init_db, verificar_licencia, verificar_estado_sistema, ADMIN_PASSWORD
 from styles import CSS_GLOBAL, render_sb_header
 
 st.set_page_config(
     page_title="Contacto S.A. — Producción",
     page_icon="🏭",
     layout="centered",
-)
-
-st.markdown(
-    """
-    <style>
-    /* Solo ocultamos botones específicos, NO el header completo */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stAppDeployButton {display:none;}
-    [data-testid="stDecoration"] {display:none;}
-    [data-testid="stStatusWidget"] {display:none;}
-    </style>
-    """,
-    unsafe_allow_html=True
 )
 
 verificar_licencia()
@@ -34,22 +20,28 @@ except Exception as e:
 
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)
 
-
 with st.sidebar:
     render_sb_header()
     st.caption("Seleccioná una sección para comenzar.")
-    st.markdown('<div style="margin-top:8px;color:#2a3a4a;font-size:11px;text-align:center;">v1.0 · Fabrica Produccion</div>', unsafe_allow_html=True)
-# --- ACÁ AGREGAMOS TU ACCESO ADMIN ---
+    st.markdown(
+        '<div style="margin-top:8px;color:#2a3a4a;font-size:11px;text-align:center;">'
+        'v1.0 · Fabrica Produccion</div>',
+        unsafe_allow_html=True,
+    )
     st.divider()
     with st.expander("🔐 Panel de Control"):
         clave = st.text_input("Llave Maestra", type="password")
-        es_admin = (clave == "admin123")
-        
-        if es_admin:
+        es_admin = bool(ADMIN_PASSWORD) and (clave == ADMIN_PASSWORD)
+
+        if clave and es_admin:
             st.success("Acceso Admin habilitado")
             st.session_state["is_admin"] = True
+        elif clave:
+            st.error("Contraseña incorrecta")
+            st.session_state["is_admin"] = False
         else:
             st.session_state["is_admin"] = False
+
 st.markdown("""
 <div style="text-align:center; padding: 20px 0 10px;">
     <div style="font-size:52px;">🏭</div>

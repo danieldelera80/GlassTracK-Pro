@@ -3,6 +3,10 @@
 *.sqlite
 *.sqlite3
 
+# Registros offline — datos de produccion reales, nunca al repo
+offline_records.csv
+*.csv
+
 # Python
 __pycache__/
 *.py[cod]
