@@ -151,18 +151,51 @@ def obtener_pendientes_entrega():
 
 
 def resolver_nombre_orden(orden_base: str) -> str:
-    """Verifica si la orden ya existe en el sistema y, de ser así, le auto-asigna un sub-índice."""
+    """
+    Devuelve el nombre canónico de la orden en el sistema:
+    - Si existe como '[URGENTE] X' → retorna '[URGENTE] X' (misma pieza, urgente)
+    - Si existe como '[INCIDENCIA] X' → retorna '[INCIDENCIA] X'
+    - Si ya existe como 'X' (pieza física duplicada) → retorna 'X - N+1'
+    - Si no existe → retorna 'X' (pieza nueva)
+    Usa queries parametrizadas para evitar SQL injection.
+    """
     try:
-        # Buscamos todas las órdenes que sean exactamente 'orden_base' o que empiecen con 'orden_base - '
-        query = f"SELECT DISTINCT orden FROM registros WHERE orden = '{orden_base}' OR orden LIKE '{orden_base} - %'"
-        df = conn.query(query, ttl=0)
-        
+        base = _PFX_RE.sub("", orden_base).strip()  # quitar prefijo si el escáner lo incluía
+        df = conn.query(
+            "SELECT DISTINCT orden FROM registros "
+            "WHERE TRIM(orden) = :base "
+            "   OR TRIM(orden) ILIKE :urg "
+            "   OR TRIM(orden) ILIKE :inc "
+            "   OR TRIM(orden) LIKE :base_sub "
+            "   OR TRIM(orden) ILIKE :urg_sub "
+            "   OR TRIM(orden) ILIKE :inc_sub",
+            params={
+                "base":     base,
+                "urg":      f"[URGENTE] {base}",
+                "inc":      f"[INCIDENCIA] {base}",
+                "base_sub": f"{base} - %",
+                "urg_sub":  f"[URGENTE] {base} - %",
+                "inc_sub":  f"[INCIDENCIA] {base} - %",
+            },
+            ttl=0
+        )
+
         if df.empty:
-            return orden_base  # Es la primera de su especie
-            
-        # Si ya existen, contamos cuántas hay y generamos la siguiente en la saga
+            return orden_base  # nueva pieza, no existe en el sistema
+
+        ordenes = [str(o).strip() for o in df["orden"].values]
+
+        # Prioridad: si la pieza ya tiene prefijo urgente/incidencia, usar ese nombre
+        for o in ordenes:
+            if "[URGENTE]" in o.upper() and " - " not in o:
+                return o  # "[URGENTE] 22" → misma pieza, retorna nombre canónico
+        for o in ordenes:
+            if "[INCIDENCIA]" in o.upper() and " - " not in o:
+                return o
+
+        # Pieza duplicada físicamente (mismo número, distintas unidades)
         cantidad = len(df)
-        return f"{orden_base} - {cantidad + 1}"
+        return f"{base} - {cantidad + 1}"
     except Exception as e:
         print(f"Error al resolver nombre de orden: {e}")
         return orden_base
@@ -184,11 +217,15 @@ def decodificar_imagen(img_bytes) -> str | None:
 
 
 def obtener_carro_lado(orden: str):
-    """Retorna (carro, lado) del último registro de la orden, o (0, 'A') si no hay datos."""
+    """Retorna (carro, lado) del último registro de la orden (busca con y sin prefijo)."""
     try:
+        base = _PFX_RE.sub("", orden).strip()
         df = conn.query(
-            "SELECT carro, lado FROM registros WHERE TRIM(orden) = :ord ORDER BY fecha_hora DESC LIMIT 1",
-            params={"ord": orden.strip()}, ttl=0
+            "SELECT carro, lado FROM registros "
+            "WHERE TRIM(orden) = :base OR TRIM(orden) ILIKE :urg OR TRIM(orden) ILIKE :inc "
+            "ORDER BY fecha_hora DESC LIMIT 1",
+            params={"base": base, "urg": f"[URGENTE] {base}", "inc": f"[INCIDENCIA] {base}"},
+            ttl=0
         )
         if not df.empty:
             return int(df.iloc[0]["carro"] or 0), str(df.iloc[0]["lado"] or "A")

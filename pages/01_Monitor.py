@@ -87,7 +87,7 @@ def cargar_datos():
     df_total = conn.query(query, ttl=0)
 
     if df_total is None or df_total.empty:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), set(), set(), set()
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), set(), set(), set(), pd.DataFrame()
 
     # Normalizar a hora Argentina (UTC-3), sin info de zona horaria
     df_total["fecha_hora"] = (
