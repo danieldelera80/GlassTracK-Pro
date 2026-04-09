@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -95,6 +96,34 @@ def cargar_datos():
         .dt.tz_localize(None)
     )
     df_total["orden"] = df_total["orden"].astype(str).str.strip()
+
+    # ── Normalización de prefijos ────────────────────────────────────────────
+    # Problema: "12" y "[URGENTE] 12" son el mismo pedido físico pero strings
+    # distintos → el dedup los trataría como dos órdenes separadas.
+    # Solución: extraer el número base, propagar el prefijo a TODOS los registros
+    # de esa base, y luego deduplicar por nombre normalizado.
+    _pfx = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
+
+    df_total["_base"] = df_total["orden"].apply(lambda x: _pfx.sub("", x).strip())
+
+    _bases_urg = set(
+        df_total.loc[df_total["orden"].str.contains(r'\[URGENTE\]', case=False, na=False), "_base"]
+    )
+    _bases_inc = set(
+        df_total.loc[df_total["orden"].str.contains(r'\[INCIDENCIA\]', case=False, na=False), "_base"]
+    ) - _bases_urg  # urgente tiene prioridad sobre incidencia
+
+    def _normalizar_orden(row):
+        base = row["_base"]
+        if base in _bases_urg:
+            return f"[URGENTE] {base}"
+        if base in _bases_inc:
+            return f"[INCIDENCIA] {base}"
+        return base
+
+    df_total["orden"] = df_total.apply(_normalizar_orden, axis=1)
+    df_total = df_total.drop(columns=["_base"])
+    # ────────────────────────────────────────────────────────────────────────
 
     df_entrega   = df_total[df_total["sector"] == "Entrega"].copy()
     df_terminado = df_total[df_total["sector"] == "Terminado"].copy()
