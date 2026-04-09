@@ -12,23 +12,76 @@ html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
-/* ── Ocultar elementos de Streamlit Cloud que no necesitamos ── */
-/* NO se oculta header ni stHeader: contienen el botón del sidebar y el selector de tema */
+/* ══════════════════════════════════════════════════════════
+   OCULTAR TODA LA INTERFAZ DE STREAMLIT CLOUD
+   Share · Estrella · Lápiz · GitHub · Manage App · Footer
+   ══════════════════════════════════════════════════════════ */
+
+/* Header completo (contiene Share, ★, ✏, GitHub) */
+header[data-testid="stHeader"],
+[data-testid="stHeader"],
+.stApp > header,
+.stAppHeader {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Toolbar y sus botones individuales */
+[data-testid="stToolbar"],
+[data-testid="stToolbarActions"],
+[data-testid="stToolbarActionButton"],
 [data-testid="manage-app-button"],
 [data-testid="stStatusWidget"],
 [data-testid="stDecoration"],
 [data-testid="stBottom"],
+.stToolbar,
 .stDeployButton,
+.stAppToolbar,
+
+/* Botones por nombre/aria-label */
 button[title="Manage app"],
 button[aria-label="Manage app"],
+button[title="Share"],
+button[aria-label="Share"],
+button[title="Star app"],
+button[aria-label="Star app"],
+button[title="Edit app"],
+button[aria-label="Edit app"],
+button[title="View on Github"],
+button[aria-label="View on Github"],
+button[title="View source"],
+button[aria-label="View source"],
+button[title="Fork"],
+button[aria-label="Fork"],
+
+/* Badges y banners */
 [class*="viewerBadge"],
 [class*="managedApp"],
+[class*="shareButton"],
+[class*="stShareButton"],
+[data-testid="stShareButton"],
+
+/* Menu hamburguesa y footer */
 #MainMenu,
-footer {
+footer,
+footer a {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
+    min-height: 0 !important;
     overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Eliminar el espacio superior que deja el header oculto */
+.stApp > div:first-child,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > section:first-child,
+.main .block-container {
+    padding-top: 0.5rem !important;
+    margin-top: 0 !important;
 }
 
 /* ── Animaciones ── */
@@ -36,13 +89,11 @@ footer {
     from { opacity: 0; transform: translateY(15px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
-/* Animación solo en primer render (sin parpadeo en autorefresh) */
 [data-testid="stVerticalBlock"] > div:first-child {
     animation: fadeInUp 0.3s ease-out forwards;
 }
 
-/* ── Ocultar navegación automática de Streamlit ── */
+/* ── Ocultar navegación automática de páginas de Streamlit ── */
 [data-testid="stSidebarNav"] { display: none !important; }
 
 /* ── Sidebar general ── */
@@ -107,8 +158,6 @@ footer {
     box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3) !important;
     border-color: #3b82f6 !important;
 }
-
-/* Boton Primario sobreescritura */
 [data-testid="stButton"] button[kind="primary"] {
     background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
     border: none !important;
@@ -130,10 +179,7 @@ div[data-baseweb="input"]:focus-within {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
 }
 
-/* ── Reducir padding superior para que la barra quede pegada al borde ── */
-.main .block-container { padding-top: 0.5rem !important; }
-
-/* ── Barra de pasos ── */
+/* ── Barra de pasos sticky ── */
 .steps-bar {
     display: flex; justify-content: space-between;
     align-items: center; margin-bottom: 20px;
@@ -159,12 +205,13 @@ div[data-baseweb="input"]:focus-within {
     transition: all 0.3s ease;
 }
 .step-circle.done   { background: #064e3b; border-color: #059669; color: #34d399; }
-.step-circle.active { background: #1e3a8a; border-color: #3b82f6; color: #bfdbfe; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+.step-circle.active { background: #1e3a8a; border-color: #3b82f6; color: #bfdbfe;
+                       box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
 .step-label { font-size: 12px; color: #64748b; margin-top: 6px; text-align: center; }
 .step-label.active  { color: #60a5fa; font-weight: 700; }
 .step-label.done    { color: #059669; }
 
-/* ── Glassmorphism Custom Metric Cards ── */
+/* ── Metric Cards ── */
 .glass-metric {
     background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(12px);
@@ -177,93 +224,59 @@ div[data-baseweb="input"]:focus-within {
     transition: transform 0.3s ease, border-color 0.3s ease;
     margin-bottom: 16px;
 }
-.glass-metric:hover {
-    transform: translateY(-4px);
-    border-color: rgba(59, 130, 246, 0.5);
-}
+.glass-metric:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); }
 .glass-title {
-    font-size: 13px;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 13px; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
 }
 .glass-value {
-    font-size: 46px;
-    font-weight: 800;
-    margin-top: 8px;
+    font-size: 46px; font-weight: 800; margin-top: 8px;
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .glass-value.green {
     background: linear-gradient(135deg, #34d399, #10b981);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 
-/* ── Alerta Urgente global (Monitor + Formulario) ── */
+/* ── Alerta Urgente global ── */
 @keyframes pulseUrgente {
     0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.85); border-color: #ef4444; }
     60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0);  border-color: #991b1b; }
     100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);     border-color: #ef4444; }
 }
 .alerta-urgente {
-    display: flex;
-    align-items: center;
-    gap: 14px;
+    display: flex; align-items: center; gap: 14px;
     background: linear-gradient(135deg, #7f1d1d 0%, #3b0808 100%);
-    border: 2px solid #ef4444;
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 18px;
+    border: 2px solid #ef4444; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 18px;
     animation: pulseUrgente 1.8s ease-out infinite;
 }
 .alerta-urgente-titulo {
-    font-weight: 800;
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #fca5a5;
+    font-weight: 800; font-size: 12px;
+    letter-spacing: 2px; text-transform: uppercase; color: #fca5a5;
 }
 .alerta-urgente-ordenes {
-    font-size: 15px;
-    margin-top: 5px;
-    color: #ffffff;
-    font-weight: 700;
-    word-break: break-all;
+    font-size: 15px; margin-top: 5px; color: #ffffff;
+    font-weight: 700; word-break: break-all;
 }
 
 /* ── Responsive Mobile / Tablet ── */
 @media screen and (max-width: 768px) {
-    /* Columnas Streamlit apiladas */
-    [data-testid="column"] {
-        width: 100% !important;
-        flex: 1 1 100% !important;
-        min-width: 100% !important;
-    }
-    /* Métricas compactas */
+    [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important; }
     .glass-metric { padding: 14px 10px; margin-bottom: 8px; }
     .glass-value  { font-size: 34px; }
     .glass-title  { font-size: 11px; letter-spacing: 1px; }
-    /* Botones touch-friendly (mínimo 44px WCAG) */
     .stButton > button { min-height: 3.8em !important; font-size: 16px !important; }
-    /* Tabs más compactos */
     button[data-baseweb="tab"] { font-size: 13px !important; padding: 8px 10px !important; }
-    /* Inputs full-width */
-    [data-testid="stTextInput"] input { font-size: 16px !important; } /* evita zoom iOS */
-    /* Radio horizontal pasa a vertical */
+    [data-testid="stTextInput"] input { font-size: 16px !important; }
     [data-testid="stRadio"] > div { flex-direction: column !important; }
-    /* Sidebar más estrecho */
     [data-testid="stSidebar"] { min-width: 200px !important; max-width: 260px !important; }
-    /* Plotly chart: quitar toolbar en mobile */
     .modebar { display: none !important; }
 }
-
 @media screen and (max-width: 480px) {
     .glass-value  { font-size: 26px; }
     .glass-title  { font-size: 10px; }
-    /* Tabla: fuente más pequeña para caber en pantalla */
     [data-testid="stDataFrame"] { font-size: 12px !important; }
 }
 
@@ -282,7 +295,6 @@ div[data-baseweb="input"]:focus-within {
 
 
 def render_sb_header():
-    """Cabecera con marca en el sidebar."""
     import streamlit as st
     st.markdown("""
     <div class="sb-header">
@@ -294,7 +306,6 @@ def render_sb_header():
 
 
 def render_sb_operario(op: str, sector: str):
-    """Tarjeta de operario activo en el sidebar."""
     import streamlit as st
     st.markdown(f"""
     <div class="sb-op-card">
@@ -306,7 +317,6 @@ def render_sb_operario(op: str, sector: str):
 
 
 def render_steps(paso_actual: int, labels: list):
-    """Barra de progreso de pasos."""
     import streamlit as st
     items = ""
     for i, label in enumerate(labels):
@@ -325,7 +335,6 @@ def render_steps(paso_actual: int, labels: list):
 
 
 def render_contexto(op: str, sector: str):
-    """Barra de contexto con avatar."""
     import streamlit as st
     inicial = op[0].upper() if op else "?"
     st.markdown(f"""
