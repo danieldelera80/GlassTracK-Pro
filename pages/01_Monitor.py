@@ -68,9 +68,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st_autorefresh(interval=15_000, key="monitor_autorefresh")
+st_autorefresh(interval=30_000, key="monitor_autorefresh")
 _ultimo_refresh = datetime.now(_ARG_TZ).strftime("%H:%M:%S")
-st.toast(f"Datos actualizados a las {_ultimo_refresh}", icon="🔄")
+# Toast solo si fue un autorefresh real (no una interaccion del usuario)
+if st.session_state.get("_ultimo_refresh_prev") != _ultimo_refresh:
+    st.toast(f"Actualizado a las {_ultimo_refresh}", icon="🔄")
+    st.session_state["_ultimo_refresh_prev"] = _ultimo_refresh
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -383,6 +386,12 @@ with tab_prod:
                     mostrar_modal_orden(_urg)
 
     # ── Barra de búsqueda + filtro de estado ─────────────────────────────────
+    # Persistir busqueda y filtro en session_state para que el autorefresh no los borre
+    if "busqueda_orden" not in st.session_state:
+        st.session_state["busqueda_orden"] = ""
+    if "filtro_estado" not in st.session_state:
+        st.session_state["filtro_estado"] = "🔵 Todos"
+
     col_srch, col_filt = st.columns([3, 2])
     with col_srch:
         busqueda = st.text_input(

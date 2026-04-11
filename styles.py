@@ -7,40 +7,49 @@ CSS_GLOBAL = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
+/* ══════════════════════════════════════════════════════════
+   FORZAR TEMA OSCURO — independiente del OS / navegador
+   ══════════════════════════════════════════════════════════ */
+:root {
+    color-scheme: dark !important;
+}
+html, body {
+    color-scheme: dark !important;
+}
+/* Forzar fondo oscuro si Streamlit lo ignora */
+.stApp {
+    background-color: #0d1117 !important;
+}
+[data-testid="stAppViewContainer"] {
+    background-color: #0d1117 !important;
+}
+[data-testid="stMain"] {
+    background-color: #0d1117 !important;
+}
+
 /* ── Fuente Moderna Global ── */
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
 /* ══════════════════════════════════════════════════════════
-   OCULTAR TODA LA INTERFAZ DE STREAMLIT CLOUD
-   Share · Estrella · Lápiz · GitHub · Manage App · Footer
+   OCULTAR BOTONES DE STREAMLIT CLOUD
+   IMPORTANTE: NO ocultar el header completo porque
+   contiene el botón hamburguesa del sidebar en mobile.
+   Solo ocultamos los botones de la derecha.
    ══════════════════════════════════════════════════════════ */
 
-/* Header completo (contiene Share, ★, ✏, GitHub) */
-header[data-testid="stHeader"],
-[data-testid="stHeader"],
-.stApp > header,
-.stAppHeader {
-    display: none !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-}
-
-/* Toolbar y sus botones individuales */
+/* Toolbar derecha completa (Share, ★, ✏, GitHub, Manage App) */
 [data-testid="stToolbar"],
 [data-testid="stToolbarActions"],
-[data-testid="stToolbarActionButton"],
 [data-testid="manage-app-button"],
 [data-testid="stStatusWidget"],
 [data-testid="stDecoration"],
 [data-testid="stBottom"],
-.stToolbar,
 .stDeployButton,
 .stAppToolbar,
 
-/* Botones por nombre/aria-label */
+/* Botones por aria-label */
 button[title="Manage app"],
 button[aria-label="Manage app"],
 button[title="Share"],
@@ -56,29 +65,29 @@ button[aria-label="View source"],
 button[title="Fork"],
 button[aria-label="Fork"],
 
-/* Badges y banners */
+/* Badges */
 [class*="viewerBadge"],
 [class*="managedApp"],
-[class*="shareButton"],
-[class*="stShareButton"],
 [data-testid="stShareButton"],
 
-/* Menu hamburguesa y footer */
+/* Menú hamburguesa de páginas (no el del sidebar) y footer */
 #MainMenu,
-footer,
-footer a {
+footer {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
-    min-height: 0 !important;
     overflow: hidden !important;
     pointer-events: none !important;
 }
 
-/* Eliminar el espacio superior que deja el header oculto */
-.stApp > div:first-child,
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > section:first-child,
+/* Header: mantener visible pero sin altura extra innecesaria
+   El header contiene el botón de abrir sidebar — NO se puede ocultar */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    border-bottom: none !important;
+}
+
+/* Reducir padding superior del contenido principal */
 .main .block-container {
     padding-top: 0.5rem !important;
     margin-top: 0 !important;
@@ -87,19 +96,19 @@ footer a {
 /* ── Animaciones ── */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 [data-testid="stVerticalBlock"] > div:first-child {
     animation: fadeInUp 0.3s ease-out forwards;
 }
 
-/* ── Ocultar navegación automática de páginas de Streamlit ── */
+/* ── Ocultar navegación automática de páginas ── */
 [data-testid="stSidebarNav"] { display: none !important; }
 
 /* ── Sidebar general ── */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0d1117 0%, #161b27 100%);
-    border-right: 1px solid #1e2a3a;
+    background: linear-gradient(180deg, #0d1117 0%, #161b27 100%) !important;
+    border-right: 1px solid #1e2a3a !important;
 }
 [data-testid="stSidebar"] > div:first-child {
     padding-top: 0 !important;
@@ -124,7 +133,6 @@ footer a {
 /* ── Tarjeta de operario en sidebar ── */
 .sb-op-card {
     background: rgba(13, 31, 60, 0.6);
-    backdrop-filter: blur(5px);
     border: 1px solid rgba(74, 144, 217, 0.2);
     border-radius: 12px;
     padding: 14px;
@@ -135,12 +143,9 @@ footer a {
 .sb-op-label { font-size: 10px; color: #60a5fa; text-transform: uppercase;
                letter-spacing: 1.5px; margin-bottom: 4px; }
 .sb-op-name  { font-size: 16px; font-weight: 700; color: #f8fafc; }
-.sb-op-sector {
-    font-size: 12px; color: #93c5fd; margin-top: 4px;
-    display: flex; align-items: center; gap: 4px;
-}
+.sb-op-sector { font-size: 12px; color: #93c5fd; margin-top: 4px; }
 
-/* ── Estilos globales de botones ── */
+/* ── Botones globales ── */
 .stButton > button {
     border-radius: 12px !important;
     font-weight: 600 !important;
@@ -193,42 +198,30 @@ div[data-baseweb="input"]:focus-within {
     content: ''; position: absolute; top: 18px; left: 10%; right: 10%;
     height: 3px; background: #1e293b; z-index: 0;
 }
-.step-item {
-    display: flex; flex-direction: column; align-items: center;
-    flex: 1; z-index: 1;
-}
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; z-index: 1; }
 .step-circle {
     width: 38px; height: 38px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 14px; border: 2px solid #334155;
-    background: #0f172a; color: #64748b;
-    transition: all 0.3s ease;
+    background: #0f172a; color: #64748b; transition: all 0.3s ease;
 }
 .step-circle.done   { background: #064e3b; border-color: #059669; color: #34d399; }
 .step-circle.active { background: #1e3a8a; border-color: #3b82f6; color: #bfdbfe;
                        box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
 .step-label { font-size: 12px; color: #64748b; margin-top: 6px; text-align: center; }
-.step-label.active  { color: #60a5fa; font-weight: 700; }
-.step-label.done    { color: #059669; }
+.step-label.active { color: #60a5fa; font-weight: 700; }
+.step-label.done   { color: #059669; }
 
 /* ── Metric Cards ── */
 .glass-metric {
     background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(148, 163, 184, 0.1);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    border-radius: 16px; padding: 24px; text-align: center;
     transition: transform 0.3s ease, border-color 0.3s ease;
     margin-bottom: 16px;
 }
 .glass-metric:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); }
-.glass-title {
-    font-size: 13px; color: #94a3b8;
-    text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
-}
+.glass-title { font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
 .glass-value {
     font-size: 46px; font-weight: 800; margin-top: 8px;
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
@@ -239,7 +232,7 @@ div[data-baseweb="input"]:focus-within {
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 
-/* ── Alerta Urgente global ── */
+/* ── Alerta Urgente ── */
 @keyframes pulseUrgente {
     0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.85); border-color: #ef4444; }
     60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0);  border-color: #991b1b; }
@@ -263,20 +256,18 @@ div[data-baseweb="input"]:focus-within {
 
 /* ── Responsive Mobile / Tablet ── */
 @media screen and (max-width: 768px) {
-    [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important; }
     .glass-metric { padding: 14px 10px; margin-bottom: 8px; }
     .glass-value  { font-size: 34px; }
-    .glass-title  { font-size: 11px; letter-spacing: 1px; }
+    .glass-title  { font-size: 11px; }
     .stButton > button { min-height: 3.8em !important; font-size: 16px !important; }
-    button[data-baseweb="tab"] { font-size: 13px !important; padding: 8px 10px !important; }
     [data-testid="stTextInput"] input { font-size: 16px !important; }
     [data-testid="stRadio"] > div { flex-direction: column !important; }
     [data-testid="stSidebar"] { min-width: 200px !important; max-width: 260px !important; }
     .modebar { display: none !important; }
 }
 @media screen and (max-width: 480px) {
-    .glass-value  { font-size: 26px; }
-    .glass-title  { font-size: 10px; }
+    .glass-value { font-size: 26px; }
+    .glass-title { font-size: 10px; }
     [data-testid="stDataFrame"] { font-size: 12px !important; }
 }
 
@@ -284,11 +275,19 @@ div[data-baseweb="input"]:focus-within {
 .success-panel {
     padding: 28px 20px; margin: 16px 0;
     background: linear-gradient(135deg, rgba(6,78,59,0.8), rgba(2,44,34,0.8));
-    backdrop-filter: blur(8px);
     border: 1px solid #059669; border-radius: 16px;
     color: #a7f3d0; text-align: center;
     box-shadow: 0 0 30px rgba(16,185,129,0.2);
 }
+
+/* ── Historial mini ── */
+.hist-row {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 12px; color: #64748b;
+    padding: 4px 0; border-bottom: 0.5px solid rgba(148,163,184,0.1);
+}
+.hist-orden { font-weight: 600; color: #94a3b8; }
+.hist-check { color: #34d399; font-size: 14px; }
 
 </style>
 """
