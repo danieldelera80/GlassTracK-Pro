@@ -195,12 +195,19 @@ def mostrar_modal_orden(orden_actual):
         st.warning("No hay registros históricos.")
         return
 
-    df_det["fecha_hora"] = pd.to_datetime(df_det["fecha_hora"])
+    # Convertir siempre de UTC a hora Argentina para mostrar correcto
+    df_det["fecha_hora"] = (
+        pd.to_datetime(df_det["fecha_hora"], utc=True)
+        .dt.tz_convert("America/Argentina/Buenos_Aires")
+        .dt.tz_localize(None)
+    )
     st.markdown("#### ⏳ Historial de Movimientos")
-    st.dataframe(df_det[["fecha_hora", "sector", "usuario", "carro", "lado"]], use_container_width=True, hide_index=True)
+    df_det_display = df_det[["fecha_hora", "sector", "usuario", "carro", "lado"]].copy()
+    df_det_display["fecha_hora"] = df_det_display["fecha_hora"].dt.strftime("%d/%m/%Y %H:%M")
+    st.dataframe(df_det_display, use_container_width=True, hide_index=True)
 
     t_ini = df_det.iloc[0]["fecha_hora"]
-    t_fin = datetime.now()
+    t_fin = datetime.now(_ARG_TZ).replace(tzinfo=None)
     if df_det.iloc[-1]["sector"] in ["Entrega", "Terminado"]:
         t_fin = df_det.iloc[-1]["fecha_hora"]
     delta = t_fin - t_ini
