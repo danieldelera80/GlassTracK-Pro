@@ -282,8 +282,29 @@ with st.sidebar:
 
     if st.session_state.get("is_admin", False):
         import csv
+        import os
         from pathlib import Path
         from sqlalchemy import text as _text
+
+        # ── Botón de Backup manual ────────────────────────────────────────
+        st.divider()
+        st.caption("🗄️ Respaldo de datos")
+        if st.button("💾 Crear Backup Ahora", use_container_width=True):
+            try:
+                import pandas as pd
+                from datetime import datetime as _dt
+                from sqlalchemy import text as _t2
+                with conn.session as _s:
+                    df_bk = pd.read_sql(_t2("SELECT * FROM registros ORDER BY fecha_hora DESC"), _s.connection())
+                backup_dir = Path(__file__).parent.parent / "backups"
+                backup_dir.mkdir(exist_ok=True)
+                ts  = _dt.now().strftime("%Y-%m-%d_%H-%M")
+                fp  = backup_dir / f"prod_{ts}.csv"
+                df_bk.to_csv(fp, index=False, sep=";", encoding="utf-8-sig")
+                st.success(f"✅ Backup guardado: {fp.name}")
+                st.caption(f"{len(df_bk)} registros · carpeta backups/")
+            except Exception as _e:
+                st.error(f"❌ Error: {_e}")
 
         OFFLINE_FILE = Path(__file__).parent.parent / "offline_records.csv"
         if OFFLINE_FILE.exists():
