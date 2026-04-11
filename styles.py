@@ -8,48 +8,48 @@ CSS_GLOBAL = """
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 /* ══════════════════════════════════════════════════════════
-   FORZAR TEMA OSCURO — independiente del OS / navegador
+   FORZAR TEMA OSCURO
    ══════════════════════════════════════════════════════════ */
-:root {
-    color-scheme: dark !important;
-}
-html, body {
-    color-scheme: dark !important;
-}
-/* Forzar fondo oscuro si Streamlit lo ignora */
-.stApp {
-    background-color: #0d1117 !important;
-}
-[data-testid="stAppViewContainer"] {
-    background-color: #0d1117 !important;
-}
+:root { color-scheme: dark !important; }
+html, body { color-scheme: dark !important; }
+.stApp,
+[data-testid="stAppViewContainer"],
 [data-testid="stMain"] {
     background-color: #0d1117 !important;
 }
 
-/* ── Fuente Moderna Global ── */
+/* ── Fuente global ── */
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
 }
 
 /* ══════════════════════════════════════════════════════════
    OCULTAR BOTONES DE STREAMLIT CLOUD
-   IMPORTANTE: NO ocultar el header completo porque
-   contiene el botón hamburguesa del sidebar en mobile.
-   Solo ocultamos los botones de la derecha.
+   REGLA CRÍTICA: NO ocultar ningún CONTENEDOR padre porque
+   puede contener el botón de sidebar. Solo ocultar hojas.
    ══════════════════════════════════════════════════════════ */
 
-/* Toolbar derecha completa (Share, ★, ✏, GitHub, Manage App) */
-[data-testid="stToolbar"],
-[data-testid="stToolbarActions"],
-[data-testid="manage-app-button"],
-[data-testid="stStatusWidget"],
+/* Contenedor de acciones de la derecha — este SÍ es seguro ocultar */
+[data-testid="stToolbarActions"] {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Elementos decorativos y badges */
 [data-testid="stDecoration"],
 [data-testid="stBottom"],
+[data-testid="stStatusWidget"],
+[class*="viewerBadge"],
+[class*="managedApp"],
+[data-testid="stShareButton"],
 .stDeployButton,
-.stAppToolbar,
+footer,
+#MainMenu {
+    display: none !important;
+    visibility: hidden !important;
+}
 
-/* Botones por aria-label */
+/* Botones individuales por nombre — capa extra de seguridad */
 button[title="Manage app"],
 button[aria-label="Manage app"],
 button[title="Share"],
@@ -63,48 +63,36 @@ button[aria-label="View on Github"],
 button[title="View source"],
 button[aria-label="View source"],
 button[title="Fork"],
-button[aria-label="Fork"],
-
-/* Badges */
-[class*="viewerBadge"],
-[class*="managedApp"],
-[data-testid="stShareButton"],
-
-/* Menú hamburguesa de páginas (no el del sidebar) y footer */
-#MainMenu,
-footer {
+button[aria-label="Fork"] {
     display: none !important;
     visibility: hidden !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    pointer-events: none !important;
 }
 
-/* Header: mantener visible pero sin altura extra innecesaria
-   El header contiene el botón de abrir sidebar — NO se puede ocultar */
-header[data-testid="stHeader"] {
-    background: transparent !important;
-    border-bottom: none !important;
-}
-
-/* CRÍTICO: botón para expandir sidebar cuando está colapsado —
-   NUNCA ocultar, es la única forma de volver a abrirlo en mobile */
+/* ══════════════════════════════════════════════════════════
+   GARANTIZAR VISIBILIDAD DEL BOTÓN DE SIDEBAR
+   Cubre tanto el botón abierto como el colapsado
+   ══════════════════════════════════════════════════════════ */
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
-button[data-testid="baseButton-headerNoPadding"],
-.stSidebarCollapsedControl {
+[data-testid="stSidebarNavButton"],
+[data-testid="stBaseButton-headerNoPadding"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
-    height: auto !important;
-    overflow: visible !important;
+    z-index: 1000 !important;
 }
 
-/* Reducir padding superior del contenido principal */
+/* Header transparente — SIN height:0, SIN overflow:hidden */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+/* Reducir padding superior */
 .main .block-container {
     padding-top: 0.5rem !important;
-    margin-top: 0 !important;
 }
 
 /* ── Animaciones ── */
@@ -119,7 +107,7 @@ button[data-testid="baseButton-headerNoPadding"],
 /* ── Ocultar navegación automática de páginas ── */
 [data-testid="stSidebarNav"] { display: none !important; }
 
-/* ── Sidebar general ── */
+/* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0d1117 0%, #161b27 100%) !important;
     border-right: 1px solid #1e2a3a !important;
@@ -144,16 +132,14 @@ button[data-testid="baseButton-headerNoPadding"],
 }
 .sb-sistema { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 
-/* ── Tarjeta de operario en sidebar ── */
+/* ── Tarjeta operario ── */
 .sb-op-card {
-    background: rgba(13, 31, 60, 0.6);
-    border: 1px solid rgba(74, 144, 217, 0.2);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
+    background: rgba(13,31,60,0.6);
+    border: 1px solid rgba(74,144,217,0.2);
+    border-radius: 12px; padding: 14px; margin-bottom: 12px;
     transition: background 0.3s;
 }
-.sb-op-card:hover { background: rgba(13, 31, 60, 0.9); }
+.sb-op-card:hover { background: rgba(13,31,60,0.9); }
 .sb-op-label { font-size: 10px; color: #60a5fa; text-transform: uppercase;
                letter-spacing: 1.5px; margin-bottom: 4px; }
 .sb-op-name  { font-size: 16px; font-weight: 700; color: #f8fafc; }
@@ -170,41 +156,40 @@ button[data-testid="baseButton-headerNoPadding"],
     background: linear-gradient(135deg, #1e293b, #0f172a) !important;
     border: 1px solid #334155 !important;
     color: #e2e8f0 !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
 }
 .stButton > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3) !important;
+    box-shadow: 0 8px 16px rgba(59,130,246,0.3) !important;
     border-color: #3b82f6 !important;
 }
 [data-testid="stButton"] button[kind="primary"] {
     background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-    border: none !important;
-    color: #ffffff !important;
-    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2) !important;
+    border: none !important; color: #ffffff !important;
+    box-shadow: 0 4px 6px rgba(37,99,235,0.2) !important;
 }
 [data-testid="stButton"] button[kind="primary"]:hover {
-    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.4) !important;
+    box-shadow: 0 8px 15px rgba(37,99,235,0.4) !important;
 }
 
 /* Campos de texto */
 div[data-baseweb="input"] {
     border-radius: 12px !important;
-    background-color: rgba(30, 41, 59, 0.7) !important;
+    background-color: rgba(30,41,59,0.7) !important;
     border: 1px solid #475569 !important;
 }
 div[data-baseweb="input"]:focus-within {
     border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.3) !important;
 }
 
 /* ── Barra de pasos sticky ── */
 .steps-bar {
     display: flex; justify-content: space-between;
     align-items: center; margin-bottom: 20px;
-    position: sticky; top: 0; z-index: 999;
+    position: sticky; top: 0; z-index: 100;
     background: #0f172a;
-    padding: 12px 8px 10px 8px;
+    padding: 12px 8px 10px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     margin-left: -1rem; margin-right: -1rem;
 }
@@ -221,21 +206,22 @@ div[data-baseweb="input"]:focus-within {
 }
 .step-circle.done   { background: #064e3b; border-color: #059669; color: #34d399; }
 .step-circle.active { background: #1e3a8a; border-color: #3b82f6; color: #bfdbfe;
-                       box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+                      box-shadow: 0 0 15px rgba(59,130,246,0.4); }
 .step-label { font-size: 12px; color: #64748b; margin-top: 6px; text-align: center; }
 .step-label.active { color: #60a5fa; font-weight: 700; }
 .step-label.done   { color: #059669; }
 
 /* ── Metric Cards ── */
 .glass-metric {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(15,23,42,0.6);
+    border: 1px solid rgba(148,163,184,0.1);
     border-radius: 16px; padding: 24px; text-align: center;
     transition: transform 0.3s ease, border-color 0.3s ease;
     margin-bottom: 16px;
 }
-.glass-metric:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); }
-.glass-title { font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.glass-metric:hover { transform: translateY(-4px); border-color: rgba(59,130,246,0.5); }
+.glass-title { font-size: 13px; color: #94a3b8; text-transform: uppercase;
+               letter-spacing: 1.5px; font-weight: 600; }
 .glass-value {
     font-size: 46px; font-weight: 800; margin-top: 8px;
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
@@ -249,8 +235,8 @@ div[data-baseweb="input"]:focus-within {
 /* ── Alerta Urgente ── */
 @keyframes pulseUrgente {
     0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.85); border-color: #ef4444; }
-    60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0);  border-color: #991b1b; }
-    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0);     border-color: #ef4444; }
+    60%  { box-shadow: 0 0 0 14px rgba(239,68,68,0); border-color: #991b1b; }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); border-color: #ef4444; }
 }
 .alerta-urgente {
     display: flex; align-items: center; gap: 14px;
@@ -275,7 +261,6 @@ div[data-baseweb="input"]:focus-within {
     .glass-title  { font-size: 11px; }
     .stButton > button { min-height: 3.8em !important; font-size: 16px !important; }
     [data-testid="stTextInput"] input { font-size: 16px !important; }
-    [data-testid="stRadio"] > div { flex-direction: column !important; }
     [data-testid="stSidebar"] { min-width: 200px !important; max-width: 260px !important; }
     .modebar { display: none !important; }
 }
