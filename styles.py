@@ -87,6 +87,20 @@ header[data-testid="stHeader"] {
     border-bottom: none !important;
 }
 
+/* CRÍTICO: botón para expandir sidebar cuando está colapsado —
+   NUNCA ocultar, es la única forma de volver a abrirlo en mobile */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+button[data-testid="baseButton-headerNoPadding"],
+.stSidebarCollapsedControl {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
 /* Reducir padding superior del contenido principal */
 .main .block-container {
     padding-top: 0.5rem !important;
