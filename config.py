@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).parent
 
 SECTORES = [
     "Corte", "Corte Laminado", "Canteado", "Biselado", "Perforación",
-    "DVH", "Laminado", "Sala de Laminado", "Autoclave", "Templado", "Terminado", "Entrega",
+    "DVH", "Laminado", "Sala de Laminado", "Autoclave", "Templado", "Optimización", "Terminado", "Entrega",
 ]
 
 # Sectores que requieren escaneo directo (sin carro ni lado)
