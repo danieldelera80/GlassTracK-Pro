@@ -34,3 +34,7 @@ _python_installer/*.msix
 Thumbs.db
 Thumbs.db:encryptable
 desktop.ini
+
+# Backups locales - no subir a GitHub
+backups/
+*.sql
