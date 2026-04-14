@@ -69,6 +69,14 @@ def init_db() -> None:
                 sector     TEXT     NOT NULL
             );
         """))
+        s.execute(text("""
+            CREATE TABLE IF NOT EXISTS incidencias_detalle (
+                id         SERIAL PRIMARY KEY,
+                orden_base TEXT     NOT NULL UNIQUE,
+                detalle    TEXT     NOT NULL,
+                fecha_hora TIMESTAMP NOT NULL
+            );
+        """))
         s.commit()
 
 # ══════════════════════════════════════════════════════════════════════════════

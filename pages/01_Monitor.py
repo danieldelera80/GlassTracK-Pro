@@ -216,9 +216,25 @@ def mostrar_modal_orden(orden_actual):
     delta = t_fin - t_ini
     st.info(f"📌 **Tiempo en planta:** {delta.components.days} días y {delta.components.hours} horas.")
 
+    # Mostrar detalle de incidencia si ya existe
+    _base_orden = re.sub(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
+    if "[INCIDENCIA]" in orden_actual.upper():
+        df_inc_det = conn.query(
+            "SELECT detalle, fecha_hora FROM incidencias_detalle WHERE orden_base = :base",
+            params={"base": _base_orden}, ttl=0
+        )
+        if df_inc_det is not None and not df_inc_det.empty:
+            st.error(f"🚨 **Motivo de incidencia:** {df_inc_det.iloc[0]['detalle']}")
+
     st.divider()
     st.markdown("#### 🚨 Acciones Críticas")
     pass_input = st.text_input("🔑 Contraseña de Seguridad (Admin):", type="password")
+    detalle_incidencia = st.text_area(
+        "📝 Motivo de incidencia:",
+        placeholder="Ej: Pieza rota, máquina caída, error de corte...",
+        height=80,
+        key="detalle_inc_input"
+    )
 
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -242,11 +258,29 @@ def mostrar_modal_orden(orden_actual):
                     nuevo = f"[INCIDENCIA] {orden_actual}"
                     with conn.session as s:
                         s.execute(_text("UPDATE registros SET orden = :n WHERE TRIM(orden) = :v"), {"n": nuevo, "v": orden_actual})
+                        if detalle_incidencia.strip():
+                            s.execute(_text("""
+                                INSERT INTO incidencias_detalle (orden_base, detalle, fecha_hora)
+                                VALUES (:base, :det, NOW())
+                                ON CONFLICT (orden_base) DO UPDATE SET detalle = :det, fecha_hora = NOW()
+                            """), {"base": orden_actual, "det": detalle_incidencia.strip()})
                         s.commit()
-                    st.success("🚨 Incidencia inyectada.")
+                    st.success("🚨 Incidencia registrada.")
                     st.rerun()
                 else:
-                    st.info("Ya está con incidencia.")
+                    # Permitir actualizar el detalle si ya tiene incidencia
+                    if detalle_incidencia.strip():
+                        with conn.session as s:
+                            s.execute(_text("""
+                                INSERT INTO incidencias_detalle (orden_base, detalle, fecha_hora)
+                                VALUES (:base, :det, NOW())
+                                ON CONFLICT (orden_base) DO UPDATE SET detalle = :det, fecha_hora = NOW()
+                            """), {"base": _base_orden, "det": detalle_incidencia.strip()})
+                            s.commit()
+                        st.success("📝 Detalle de incidencia actualizado.")
+                        st.rerun()
+                    else:
+                        st.info("Ya está con incidencia. Escribí un motivo para actualizarlo.")
             elif pass_input:
                 st.error("Contraseña incorrecta.")
     with c3:
