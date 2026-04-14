@@ -6,7 +6,7 @@ setlocal
 ::  Support IT - Daniel De Lera
 :: ============================================================
 
-set DB_URL=postgresql://neondb_owner:npg_QX5KbazNRUO6@ep-odd-frost-acbh50ok-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+set DB_URL=postgresql://neondb_owner:npg_QX5KbazNRUO6@ep-odd-frost-acbh50ok-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require^&channel_binding=require
 set BACKUP_DIR=D:\Users\ryrco\Desktop\copia de mjjm funcionando neo\backups
 set FECHA=%date:~6,4%-%date:~3,2%-%date:~0,2%
 set ARCHIVO=glasstrak_backup_%FECHA%.sql
@@ -20,7 +20,7 @@ echo ================================
 echo Iniciando backup...
 echo.
 
-pg_dump "%DB_URL%" -f "%BACKUP_DIR%\%ARCHIVO%"
+"C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" "%DB_URL%" -f "%BACKUP_DIR%\%ARCHIVO%"
 
 if %errorlevel% == 0 (
     echo.
