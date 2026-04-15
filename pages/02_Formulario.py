@@ -754,6 +754,10 @@ elif paso == 3:
                 st.error(f"❌ {err}")
     else:
         # Orden nueva → pedir carro y lado
+        es_error = False
+        if st.session_state.sector_confirmado == "Optimización":
+            es_error = st.checkbox("Es orden de error", key="_t_es_error")
+
         col_c, col_l = st.columns(2)
         with col_c:
             st.markdown("**🛒 Carro**")
@@ -767,10 +771,11 @@ elif paso == 3:
 
         st.write("")
         if st.button("↘️ TOMAR PIEZA", type="primary", use_container_width=True, key="btn_tomar_nuevo"):
-            if not carro_ok:
+            if not carro_ok and not es_error:
                 st.warning("⚠️ Ingresá el número de carro.")
             else:
-                ok, err = guardar_registro(_orden, int(carro_str.strip()), lado,
+                carro_val = int(carro_str.strip()) if carro_ok else 0
+                ok, err = guardar_registro(_orden, carro_val, lado,
                                            st.session_state.op_confirmado,
                                            f"En Proceso en {st.session_state.sector_confirmado}")
                 if ok:
@@ -823,6 +828,10 @@ elif paso == 4:
     st.caption(f"Desde: **{st.session_state.sector_confirmado}**")
     st.write("")
 
+    es_error = False
+    if st.session_state.sector_confirmado == "Optimización":
+        es_error = st.checkbox("Es orden de error", key="_d_es_error")
+
     col_c, col_l = st.columns(2)
     with col_c:
         st.markdown("**🛒 Carro**")
@@ -845,10 +854,10 @@ elif paso == 4:
 
     st.write("")
     if st.button("📤 FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
-        if not carro_ok:
+        if not carro_ok and not es_error:
             st.warning("⚠️ Ingresá el número de carro.")
         else:
-            carro = int(_carro_ef)
+            carro = int(_carro_ef) if carro_ok else 0
             ok, err = True, None
             es_offline = False
 
