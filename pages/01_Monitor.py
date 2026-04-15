@@ -294,6 +294,50 @@ def mostrar_modal_orden(orden_actual):
             elif pass_input:
                 st.error("Contraseña incorrecta.")
 
+    # ── Editar carro y lado ───────────────────────────────────────────────────
+    if pass_input == ADMIN_PASSWORD:
+        st.divider()
+        st.markdown("#### ✏️ Editar Carro y Lado")
+
+        _opciones = {
+            f"{row['fecha_hora'].strftime('%d/%m/%Y %H:%M')} — {row['sector']}": row["id"]
+            for _, row in df_det.iterrows()
+        }
+        _label_sel = st.selectbox(
+            "Seleccionar registro a editar:",
+            options=list(_opciones.keys()),
+            key="edit_cl_registro"
+        )
+        _id_sel = _opciones[_label_sel]
+        _fila_sel = df_det[df_det["id"] == _id_sel].iloc[0]
+
+        col_ec, col_el = st.columns(2)
+        with col_ec:
+            _nuevo_carro = st.number_input(
+                "Carro",
+                min_value=0,
+                value=int(_fila_sel["carro"] or 0),
+                step=1,
+                key="edit_cl_carro"
+            )
+        with col_el:
+            _nuevo_lado = st.selectbox(
+                "Lado",
+                options=["A", "B"],
+                index=0 if str(_fila_sel["lado"] or "A").upper() != "B" else 1,
+                key="edit_cl_lado"
+            )
+
+        if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True, key="edit_cl_guardar"):
+            with conn.session as s:
+                s.execute(
+                    _text("UPDATE registros SET carro = :c, lado = :l WHERE id = :id"),
+                    {"c": _nuevo_carro, "l": _nuevo_lado, "id": int(_id_sel)}
+                )
+                s.commit()
+            st.success(f"✅ Registro actualizado: Carro {_nuevo_carro} / Lado {_nuevo_lado}")
+            st.rerun()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  SIDEBAR
