@@ -462,7 +462,9 @@ elif paso == 2:
     if st.session_state.entrega_lista:
         st.session_state.entrega_lista = False
         ok, err = guardar_registro(
-            st.session_state.orden_val, 0, "-",
+            st.session_state.orden_val,
+            st.session_state.carro_previo,
+            st.session_state.lado_previo or "-",
             st.session_state.op_confirmado, st.session_state.sector_confirmado,
         )
         if ok:
@@ -696,6 +698,8 @@ elif paso == 2:
                     with col_btn:
                         if st.button("🚀 ENTREGAR", key=f"ent_{row['orden']}", use_container_width=True):
                             st.session_state.orden_val     = row['orden']
+                            st.session_state.carro_previo  = int(row.get('carro') or 0)
+                            st.session_state.lado_previo   = str(row.get('lado') or '-')
                             st.session_state.entrega_lista = True
                             st.rerun()
 
@@ -905,7 +909,7 @@ elif paso == 4:
                 ok, err = guardar_registro(_orden, carro, lado,
                                            st.session_state.op_confirmado, "Dañado")
             elif destino == SECTOR_TERMINADO:
-                ok, err = guardar_registro(_orden, 0, "-",
+                ok, err = guardar_registro(_orden, carro, lado,
                                            st.session_state.op_confirmado, SECTOR_TERMINADO)
             else:
                 ok, err = guardar_registro(_orden, carro, lado,
