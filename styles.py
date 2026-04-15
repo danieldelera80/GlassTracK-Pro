@@ -239,7 +239,7 @@ div[data-baseweb="input"]:focus-within {
     100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); border-color: #ef4444; }
 }
 .alerta-urgente {
-    display: flex; align-items: center; gap: 14px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     background: linear-gradient(135deg, #7f1d1d 0%, #3b0808 100%);
     border: 2px solid #ef4444; border-radius: 12px;
     padding: 16px 20px; margin-bottom: 18px;
@@ -251,7 +251,7 @@ div[data-baseweb="input"]:focus-within {
 }
 .alerta-urgente-ordenes {
     font-size: 15px; margin-top: 5px; color: #ffffff;
-    font-weight: 700; word-break: break-all;
+    font-weight: 700; word-break: break-word;
 }
 
 /* ── Responsive Mobile / Tablet ── */
