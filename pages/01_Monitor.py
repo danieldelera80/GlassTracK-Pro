@@ -75,7 +75,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st_autorefresh(interval=30_000, key="monitor_autorefresh")
+st_autorefresh(interval=60_000, key="monitor_autorefresh")
 _ultimo_refresh = datetime.now(_ARG_TZ).strftime("%H:%M")
 # Toast solo si fue un autorefresh real (no una interaccion del usuario)
 if st.session_state.get("_ultimo_refresh_prev") != _ultimo_refresh:
@@ -235,7 +235,7 @@ def mostrar_modal_orden(orden_actual):
 
     st.divider()
     st.markdown("#### 🚨 Acciones Críticas")
-    pass_input = st.text_input("🔑 Contraseña de Seguridad (Admin):", type="password")
+    pass_input = st.text_input("🔑 Contraseña de Seguridad (Admin):", type="password", autocomplete="new-password")
     detalle_incidencia = st.text_area(
         "📝 Motivo de incidencia:",
         placeholder="Ej: Pieza rota, máquina caída, error de corte...",
@@ -387,7 +387,7 @@ with st.sidebar:
         st.switch_page("pages/02_Formulario.py")
 
     st.divider()
-    st.caption("🔁 Auto-refresh cada 30 seg")
+    st.caption("🔁 Auto-refresh cada 60 seg")
 
     if st.session_state.get("is_admin", False):
         import csv
