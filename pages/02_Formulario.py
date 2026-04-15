@@ -723,7 +723,52 @@ elif paso == 3:
     st.caption(f"Sector: **{st.session_state.sector_confirmado}**")
     st.write("")
 
-    if _cp > 0:
+    if st.session_state.sector_confirmado == "Optimización":
+        # ── BLOQUE EXCLUSIVO OPTIMIZACIÓN ────────────────────────────────────
+        es_error = st.checkbox("Es orden de error", key="_t_es_error")
+
+        if not es_error:
+            col_c, col_l = st.columns(2)
+            with col_c:
+                st.markdown("**🛒 Carro**")
+                carro_str = st.text_input("Carro", key="_t_carro", placeholder="Número...", label_visibility="collapsed")
+                carro_ok  = carro_str.strip().isdigit() and int(carro_str.strip()) >= 1
+                if carro_str.strip() and not carro_ok:
+                    st.caption("⚠️ Número inválido")
+            with col_l:
+                st.markdown("**↔️ Lado**")
+                lado = st.selectbox("Lado", _LADOS, key="_t_lado", label_visibility="collapsed")
+        else:
+            carro_str = ""
+            carro_ok  = True
+            lado      = _lp if _lp else "A"
+
+        _destinos_opt = [s for s in SECTORES if s != "Optimización" and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]] + [SECTOR_TERMINADO]
+        destino_opt   = st.selectbox("📍 Enviar a:", _destinos_opt, key="_t_destino_opt")
+
+        st.write("")
+        if st.button("📤 ENVIAR", type="primary", use_container_width=True, key="btn_enviar_opt"):
+            if not es_error and not carro_ok:
+                st.warning("⚠️ Ingresá el número de carro.")
+            else:
+                carro_val = int(carro_str.strip()) if (carro_ok and carro_str.strip()) else (_cp if _cp > 0 else 0)
+                ok, err = guardar_registro(_orden, carro_val, lado,
+                                           st.session_state.op_confirmado,
+                                           f"Enviado a {destino_opt}")
+                if ok:
+                    agregar_historial(_orden, st.session_state.sector_confirmado, enviado_a=destino_opt)
+                    st.session_state.ultimo = {"orden": _orden, "sector": st.session_state.sector_confirmado,
+                                               "op": st.session_state.op_confirmado,
+                                               "enviado_a": destino_opt, "offline": err == "OFFLINE"}
+                    st.session_state.orden_val = ""
+                    st.session_state.ord_n += 1
+                    st.session_state.reg_error = None
+                    st.session_state.paso = 2
+                    st.rerun()
+                else:
+                    st.error(f"❌ {err}")
+
+    elif _cp > 0:
         # Datos del sector anterior disponibles → 1 solo toque
         st.markdown(f"""
         <div style="background:#0f2336;border-left:4px solid #3b82f6;border-radius:8px;
@@ -754,10 +799,6 @@ elif paso == 3:
                 st.error(f"❌ {err}")
     else:
         # Orden nueva → pedir carro y lado
-        es_error = False
-        if st.session_state.sector_confirmado == "Optimización":
-            es_error = st.checkbox("Es orden de error", key="_t_es_error")
-
         col_c, col_l = st.columns(2)
         with col_c:
             st.markdown("**🛒 Carro**")
@@ -771,11 +812,10 @@ elif paso == 3:
 
         st.write("")
         if st.button("↘️ TOMAR PIEZA", type="primary", use_container_width=True, key="btn_tomar_nuevo"):
-            if not carro_ok and not es_error:
+            if not carro_ok:
                 st.warning("⚠️ Ingresá el número de carro.")
             else:
-                carro_val = int(carro_str.strip()) if carro_ok else 0
-                ok, err = guardar_registro(_orden, carro_val, lado,
+                ok, err = guardar_registro(_orden, int(carro_str.strip()), lado,
                                            st.session_state.op_confirmado,
                                            f"En Proceso en {st.session_state.sector_confirmado}")
                 if ok:
