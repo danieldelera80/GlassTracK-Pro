@@ -630,10 +630,14 @@ elif paso == 2:
             f"📥 PENDIENTES DE RECIBIR  ·  {len(entrantes)} orden{'es' if len(entrantes) != 1 else ''}",
             expanded=len(entrantes) > 0
         ):
+            _buscar_ent = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_entrantes")
+            _entrantes_fil = [r for r in entrantes if _buscar_ent.strip().lower() in str(r['orden']).lower()] if _buscar_ent.strip() else entrantes
             if not entrantes:
                 st.info("No hay órdenes entrantes en este momento.")
+            elif not _entrantes_fil:
+                st.warning("No se encontraron órdenes.")
             else:
-                for row in entrantes:
+                for row in _entrantes_fil:
                     _urg = "[URGENTE]" in str(row['orden']).upper()
                     _bg  = "#2d0a0a" if _urg else "#1e293b"
                     _brd = "#ef4444" if _urg else "#3b82f6"
@@ -671,10 +675,14 @@ elif paso == 2:
             f"⚙️ EN PROCESO EN MI MESA  ·  {len(en_proceso)} pieza{'s' if len(en_proceso) != 1 else ''}",
             expanded=len(en_proceso) > 0
         ):
+            _buscar_proc = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_en_proceso")
+            _en_proceso_fil = [r for r in en_proceso if _buscar_proc.strip().lower() in str(r['orden']).lower()] if _buscar_proc.strip() else en_proceso
             if not en_proceso:
                 st.info("No tenés piezas en tu mesa actualmente.")
+            elif not _en_proceso_fil:
+                st.warning("No se encontraron órdenes.")
             else:
-                for row in en_proceso:
+                for row in _en_proceso_fil:
                     _urg = "[URGENTE]" in str(row['orden']).upper()
                     _bg  = "#2d0a0a" if _urg else "#1f1605"
                     _brd = "#ef4444" if _urg else "#eab308"
@@ -701,10 +709,14 @@ elif paso == 2:
             f"📥 LISTAS PARA ENTREGAR  ·  {len(pendientes)} orden{'es' if len(pendientes) != 1 else ''}",
             expanded=len(pendientes) > 0
         ):
+            _buscar_pend = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_entrega")
+            _pendientes_fil = [r for r in pendientes if _buscar_pend.strip().lower() in str(r['orden']).lower()] if _buscar_pend.strip() else pendientes
             if not pendientes:
                 st.info("No hay productos terminados esperando entrega.")
+            elif not _pendientes_fil:
+                st.warning("No se encontraron órdenes.")
             else:
-                for row in pendientes:
+                for row in _pendientes_fil:
                     col_info, col_btn = st.columns([7, 3])
                     with col_info:
                         st.markdown(f"""
