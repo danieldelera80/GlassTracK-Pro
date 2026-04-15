@@ -597,23 +597,88 @@ with tab_prod:
             leg3.markdown('<div style="background:#1a4a2e;color:#4ada75;padding:6px 12px;border-radius:6px;font-size:12px;text-align:center;">✅ Orden entregada al cliente</div>', unsafe_allow_html=True)
             st.write("")
 
-        st.markdown("<p style='font-size:13px; color:#4a6a9a;'>Presioná sobre una fila para ver el detalle de la orden.</p>", unsafe_allow_html=True)
+        def mostrar_tabla_con_paginado(df_in, tab_name):
+            if df_in.empty:
+                st.info("📭 No hay órdenes en esta categoría.")
+                return
 
-        seleccion_evento = st.dataframe(
-            aplicar_estilos(df_vista.reset_index(drop=True), entregadas, terminadas, danadas),
-            use_container_width=True,
-            hide_index=True,
-            height=580,
-            selection_mode="single-row",
-            on_select="rerun",
-        )
+            tamano_pagina = 100
+            total_filas = len(df_in)
+            total_paginas = max(1, (total_filas - 1) // tamano_pagina + 1)
+            
+            page_key = f"page_{tab_name}"
+            if page_key not in st.session_state:
+                st.session_state[page_key] = 1
 
-        if hasattr(seleccion_evento, "selection") and seleccion_evento.selection.rows:
-            row_idx   = seleccion_evento.selection.rows[0]
-            orden_str = str(df_vista.reset_index(drop=True).iloc[row_idx]["Orden"]).strip()
-            mostrar_modal_orden(orden_str)
+            if st.session_state[page_key] > total_paginas:
+                st.session_state[page_key] = total_paginas
+            if st.session_state[page_key] < 1:
+                st.session_state[page_key] = 1
 
-        st.caption(f"Mostrando {len(df_vista)} registros · filtro: {filtro_estado}")
+            page = st.session_state[page_key]
+            
+            inicio = (page - 1) * tamano_pagina
+            fin = inicio + tamano_pagina
+            df_pagina = df_in.iloc[inicio:fin]
+
+            st.markdown("<p style='font-size:13px; color:#4a6a9a;'>Presioná sobre una fila para ver el detalle de la orden.</p>", unsafe_allow_html=True)
+            
+            seleccion_evento = st.dataframe(
+                aplicar_estilos(df_pagina.reset_index(drop=True), entregadas, terminadas, danadas),
+                use_container_width=True,
+                hide_index=True,
+                height=580,
+                selection_mode="single-row",
+                on_select="rerun",
+                key=f"df_{tab_name}_{page}"
+            )
+
+            if hasattr(seleccion_evento, "selection") and seleccion_evento.selection.rows:
+                row_idx = seleccion_evento.selection.rows[0]
+                orden_str = str(df_pagina.reset_index(drop=True).iloc[row_idx]["Orden"]).strip()
+                mostrar_modal_orden(orden_str)
+
+            if total_paginas > 1:
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col1:
+                    if page > 1:
+                        if st.button("⬅️ Anterior", key=f"prev_{tab_name}_{page}", use_container_width=True):
+                            st.session_state[page_key] -= 1
+                            st.rerun()
+                with col2:
+                    st.markdown(f"<div style='text-align: center; color: #94a3b8; font-size: 14px; margin-top: 8px;'>Página {page} de {total_paginas} — Mostrando {inicio+1} a {min(fin, total_filas)} de {total_filas} órdenes</div>", unsafe_allow_html=True)
+                with col3:
+                    if page < total_paginas:
+                        if st.button("Siguiente ➡️", key=f"next_{tab_name}_{page}", use_container_width=True):
+                            st.session_state[page_key] += 1
+                            st.rerun()
+
+        # ── Preparación de dataframes para Pestañas ──────────────────────────
+        df_urgentes = df_vista[df_vista["Orden"].astype(str).str.contains(r'\[URGENTE\]', case=False, na=False)]
+        
+        estados_excluidos = ["⏳ Terminado", "✅ Entregado", "⚠️ Dañado"]
+        df_proceso = df_vista[~df_vista["Estado"].isin(estados_excluidos)]
+        
+        df_terminados = df_vista[df_vista["Estado"] == "⏳ Terminado"]
+        
+        df_todas = df_vista.head(200)
+
+        # ── Renderizado de Pestañas ──────────────────────────────────────────
+        tb_urg, tb_proc, tb_term, tb_todas = st.tabs([
+            f"🚨 Urgentes ({len(df_urgentes)})", 
+            f"⚙️ En Proceso ({len(df_proceso)})", 
+            f"⏳ Terminados ({len(df_terminados)})", 
+            f"📋 Todas ({len(df_todas)})"
+        ])
+        
+        with tb_urg:
+            mostrar_tabla_con_paginado(df_urgentes, "urgentes")
+        with tb_proc:
+            mostrar_tabla_con_paginado(df_proceso, "proceso")
+        with tb_term:
+            mostrar_tabla_con_paginado(df_terminados, "terminados")
+        with tb_todas:
+            mostrar_tabla_con_paginado(df_todas, "todas")
 
 
 # ── TAB 2: RENDIMIENTO ───────────────────────────────────────────────────────
