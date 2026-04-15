@@ -65,20 +65,12 @@ st.markdown("""
 [data-testid="stTabContent"] {
     padding-top: 20px !important;
 }
-
 /* Alineación vertical del botón de las cards de urgencia */
-[data-testid="stHorizontalBlock"]:has(.alerta-urgente) > div[data-testid="column"]:last-child .stButton button {
-    height: 100%;
-    min-height: 42px;
-    margin: 0;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-[data-testid="stHorizontalBlock"]:has(.alerta-urgente) > div[data-testid="column"]:last-child {
-    display: flex;
-    align-items: center;
+[data-testid="stHorizontalBlock"]:has(.alerta-urgente) [data-testid="column"]:last-child [data-testid="stButton"] button {
+    height: 38px !important;
+    margin-top: 0px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -487,7 +479,7 @@ with tab_prod:
         _urgentes = [o for o in df_total["orden"].unique() if "[URGENTE]" in str(o).upper() and o not in entregadas]
         for _i, _urg in enumerate(_urgentes):
             _sector_urg = df_total[df_total["orden"] == _urg].sort_values("fecha_hora", ascending=False).iloc[0]["sector"]
-            _col_banner, _col_btn = st.columns([10, 1])
+            _col_banner, _col_btn = st.columns([8, 1])
             with _col_banner:
                 st.markdown(f"""
                 <div class="alerta-urgente" style="padding:8px 14px;margin-bottom:8px;">
