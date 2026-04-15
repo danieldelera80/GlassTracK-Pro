@@ -656,12 +656,11 @@ with tab_prod:
         # ── Preparación de dataframes para Pestañas ──────────────────────────
         df_urgentes = df_vista[df_vista["Orden"].astype(str).str.contains(r'\[URGENTE\]', case=False, na=False)]
         
-        estados_excluidos = ["⏳ Terminado", "✅ Entregado", "⚠️ Dañado"]
-        df_proceso = df_vista[~df_vista["Estado"].isin(estados_excluidos)]
+        df_proceso = df_vista[df_vista["Estado"] == "⚙️ En Proceso"]
         
         df_terminados = df_vista[df_vista["Estado"] == "⏳ Terminado"]
         
-        df_todas = df_vista.head(200)
+        df_todas = df_vista.copy()
 
         # ── Renderizado de Pestañas ──────────────────────────────────────────
         tb_todas, tb_urg, tb_proc, tb_term = st.tabs([
