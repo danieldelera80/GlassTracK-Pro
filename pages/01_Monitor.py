@@ -472,20 +472,17 @@ with tab_prod:
         _urgentes = [o for o in df_total["orden"].unique() if "[URGENTE]" in str(o).upper() and o not in entregadas]
         for _i, _urg in enumerate(_urgentes):
             _sector_urg = df_total[df_total["orden"] == _urg].sort_values("fecha_hora", ascending=False).iloc[0]["sector"]
-            _col_banner, _col_btn = st.columns([6, 1])
+            _col_banner, _col_btn = st.columns([10, 1])
             with _col_banner:
                 st.markdown(f"""
-                <div class="alerta-urgente">
-                    <span style="font-size:28px; flex-shrink:0;">🚨</span>
-                    <div>
-                        <div class="alerta-urgente-titulo">⚡ Prioridad Urgente Activa</div>
-                        <div class="alerta-urgente-ordenes">{_urg}</div>
-                        <div style="font-size:12px; color:#fca5a5; margin-top:4px;">📍 Sector actual: <b>{_sector_urg}</b></div>
-                    </div>
+                <div class="alerta-urgente" style="padding:8px 14px;margin-bottom:8px;">
+                    <span style="font-size:20px;flex-shrink:0;">🚨</span>
+                    <span class="alerta-urgente-titulo" style="flex-shrink:0;margin-left:6px;">⚡ PRIORIDAD URGENTE ACTIVA</span>
+                    <span class="alerta-urgente-ordenes" style="margin-top:0;margin-left:10px;">{_urg}</span>
+                    <span style="font-size:12px;color:#fca5a5;margin-left:10px;white-space:nowrap;">📍 {_sector_urg}</span>
                 </div>
                 """, unsafe_allow_html=True)
             with _col_btn:
-                st.markdown("<br><br>", unsafe_allow_html=True)
                 if st.button("👁️ Abrir", key=f"urgbtn_{_i}", use_container_width=True):
                     mostrar_modal_orden(_urg)
 
