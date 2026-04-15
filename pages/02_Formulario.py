@@ -117,6 +117,7 @@ def guardar_registro_offline(orden, carro, lado, usuario, sector):
 
 def guardar_registro(orden, carro, lado, usuario, sector):
     import time
+    from sqlalchemy.exc import IntegrityError, DataError
     for intento in range(3):
         try:
             with conn.session as s:
@@ -127,6 +128,11 @@ def guardar_registro(orden, carro, lado, usuario, sector):
                        "l": lado, "u": usuario.strip(), "s": sector})
                 s.commit()
             return True, None
+        except (IntegrityError, DataError) as e:
+            # Errores de constraint/validación: no reintentables
+            if guardar_registro_offline(orden, carro, lado, usuario, sector):
+                return True, "OFFLINE"
+            return False, str(e)
         except Exception as e:
             if intento < 2:
                 time.sleep(2)
@@ -138,7 +144,7 @@ def guardar_registro(orden, carro, lado, usuario, sector):
 
 def obtener_activos(sector_actual):
     try:
-        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty:
@@ -160,7 +166,7 @@ def obtener_activos(sector_actual):
 
 def obtener_pendientes_entrega():
     try:
-        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros ORDER BY fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty:
@@ -195,7 +201,16 @@ def resolver_nombre_orden(orden_base):
             if "[URGENTE]" in o.upper() and " - " not in o:   return o
         for o in ordenes:
             if "[INCIDENCIA]" in o.upper() and " - " not in o: return o
-        return f"{base} - {len(df) + 1}"
+        sufijos = []
+        for o in ordenes:
+            parts = o.rsplit(" - ", 1)
+            if len(parts) == 2:
+                try:
+                    sufijos.append(int(parts[1]))
+                except ValueError:
+                    pass
+        siguiente = (max(sufijos) + 1) if sufijos else 2
+        return f"{base} - {siguiente}"
     except Exception as e:
         print(f"Error resolver_nombre_orden: {e}")
         return orden_base
@@ -204,13 +219,16 @@ def resolver_nombre_orden(orden_base):
 def obtener_carro_lado(orden):
     try:
         base = _PFX_RE.sub("", orden).strip()
-        df = conn.query(
-            "SELECT carro, lado FROM registros "
-            "WHERE TRIM(orden) = :base OR TRIM(orden) ILIKE :urg OR TRIM(orden) ILIKE :inc "
-            "ORDER BY fecha_hora DESC LIMIT 1",
-            params={"base": base, "urg": f"[URGENTE] {base}", "inc": f"[INCIDENCIA] {base}"},
-            ttl=0
-        )
+        with conn.session as s:
+            df = pd.read_sql(
+                text(
+                    "SELECT carro, lado FROM registros "
+                    "WHERE TRIM(orden) = :base OR TRIM(orden) ILIKE :urg OR TRIM(orden) ILIKE :inc "
+                    "ORDER BY fecha_hora DESC LIMIT 1"
+                ),
+                s.connection(),
+                params={"base": base, "urg": f"[URGENTE] {base}", "inc": f"[INCIDENCIA] {base}"},
+            )
         if not df.empty:
             return int(df.iloc[0]["carro"] or 0), str(df.iloc[0]["lado"] or "A")
     except:
@@ -854,8 +872,8 @@ elif paso == 4:
 
     # Pre-llenar keys la primera vez
     if st.session_state.get("paso3_fresh", False):
-        st.session_state["_d_carro"] = str(_cp) if _cp > 0 else ""
-        st.session_state["_d_lado"]  = _lp if _lp in _LADOS else "A"
+        st.session_state.setdefault("_d_carro", str(_cp) if _cp > 0 else "")
+        st.session_state["_d_lado"]  = _lp if (_cp > 0 and _lp in _LADOS) else "A"
         st.session_state.paso3_fresh = False
 
     st.markdown(f"""

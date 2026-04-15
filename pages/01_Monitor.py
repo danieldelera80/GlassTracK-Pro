@@ -69,7 +69,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st_autorefresh(interval=30_000, key="monitor_autorefresh")
-_ultimo_refresh = datetime.now(_ARG_TZ).strftime("%H:%M:%S")
+_ultimo_refresh = datetime.now(_ARG_TZ).strftime("%H:%M")
 # Toast solo si fue un autorefresh real (no una interaccion del usuario)
 if st.session_state.get("_ultimo_refresh_prev") != _ultimo_refresh:
     st.toast(f"Actualizado a las {_ultimo_refresh}", icon="🔄")
@@ -263,7 +263,7 @@ def mostrar_modal_orden(orden_actual):
                                 INSERT INTO incidencias_detalle (orden_base, detalle, fecha_hora)
                                 VALUES (:base, :det, NOW())
                                 ON CONFLICT (orden_base) DO UPDATE SET detalle = :det, fecha_hora = NOW()
-                            """), {"base": orden_actual, "det": detalle_incidencia.strip()})
+                            """), {"base": _base_orden, "det": detalle_incidencia.strip()})
                         s.commit()
                     st.success("🚨 Incidencia registrada.")
                     st.rerun()
@@ -312,7 +312,7 @@ with st.sidebar:
         st.switch_page("pages/02_Formulario.py")
 
     st.divider()
-    st.caption("🔁 Auto-refresh cada 15 seg")
+    st.caption("🔁 Auto-refresh cada 30 seg")
 
     if st.session_state.get("is_admin", False):
         import csv
@@ -361,7 +361,8 @@ with st.sidebar:
                                     s.execute(_text("""
                                         INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
                                         VALUES (:f, :o, :c, :l, :u, :s)
-                                    """), {"f": row["fecha_hora"], "o": row["orden"], "c": row["carro"],
+                                    """), {"f": row["fecha_hora"], "o": row["orden"],
+                                           "c": int(row["carro"]) if row.get("carro") else 0,
                                            "l": row["lado"], "u": row["usuario"], "s": row["sector"]})
                                     idx_exito += 1
                                 s.commit()
