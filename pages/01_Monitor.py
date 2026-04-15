@@ -65,6 +65,21 @@ st.markdown("""
 [data-testid="stTabContent"] {
     padding-top: 20px !important;
 }
+
+/* Alineación vertical del botón de las cards de urgencia */
+[data-testid="stHorizontalBlock"]:has(.alerta-urgente) > div[data-testid="column"]:last-child .stButton button {
+    height: 100%;
+    min-height: 42px;
+    margin: 0;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+[data-testid="stHorizontalBlock"]:has(.alerta-urgente) > div[data-testid="column"]:last-child {
+    display: flex;
+    align-items: center;
+}
 </style>
 """, unsafe_allow_html=True)
 
