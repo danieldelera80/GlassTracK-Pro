@@ -664,21 +664,21 @@ with tab_prod:
         df_todas = df_vista.head(200)
 
         # ── Renderizado de Pestañas ──────────────────────────────────────────
-        tb_urg, tb_proc, tb_term, tb_todas = st.tabs([
+        tb_todas, tb_urg, tb_proc, tb_term = st.tabs([
+            f"📋 Todas ({len(df_todas)})",
             f"🚨 Urgentes ({len(df_urgentes)})", 
             f"⚙️ En Proceso ({len(df_proceso)})", 
-            f"⏳ Terminados ({len(df_terminados)})", 
-            f"📋 Todas ({len(df_todas)})"
+            f"⏳ Terminados ({len(df_terminados)})"
         ])
         
+        with tb_todas:
+            mostrar_tabla_con_paginado(df_todas, "todas")
         with tb_urg:
             mostrar_tabla_con_paginado(df_urgentes, "urgentes")
         with tb_proc:
             mostrar_tabla_con_paginado(df_proceso, "proceso")
         with tb_term:
             mostrar_tabla_con_paginado(df_terminados, "terminados")
-        with tb_todas:
-            mostrar_tabla_con_paginado(df_todas, "todas")
 
 
 # ── TAB 2: RENDIMIENTO ───────────────────────────────────────────────────────
