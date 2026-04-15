@@ -725,7 +725,7 @@ elif paso == 3:
 
     if st.session_state.sector_confirmado == "Optimización":
         # ── BLOQUE EXCLUSIVO OPTIMIZACIÓN ────────────────────────────────────
-        es_error = st.checkbox("Es orden de error", key="_t_es_error")
+        es_error = st.checkbox("Es orden de error", value=True, key="_t_es_error")
 
         if not es_error:
             col_c, col_l = st.columns(2)
