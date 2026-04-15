@@ -8,7 +8,7 @@ setlocal
 
 set DB_URL=postgresql://neondb_owner:npg_QX5KbazNRUO6@ep-odd-frost-acbh50ok-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require^&channel_binding=require
 set BACKUP_DIR=D:\Users\ryrco\Desktop\copia de mjjm funcionando neo\backups
-set FECHA=%date:~6,4%-%date:~3,2%-%date:~0,2%
+FOR /F "tokens=1-3 delims=/" %%a IN ("%date%") DO SET FECHA=%%a-%%b-%%c
 set ARCHIVO=glasstrak_backup_%FECHA%.sql
 
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
@@ -20,6 +20,7 @@ echo ================================
 echo Iniciando backup...
 echo.
 
+IF NOT EXIST "backups" MKDIR "backups"
 "C:\Program Files\PostgreSQL\17\bin\pg_dump.exe" "%DB_URL%" -f "%BACKUP_DIR%\%ARCHIVO%"
 
 if %errorlevel% == 0 (
