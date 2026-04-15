@@ -301,9 +301,9 @@ def mostrar_modal_orden(orden_actual):
             elif pass_input:
                 st.error("Contraseña incorrecta.")
 
-    # ── Editar carro y lado ───────────────────────────────────────────────────
+    # ── Editar carro, lado y sector ───────────────────────────────────────────
     st.divider()
-    st.markdown("#### ✏️ Editar Carro y Lado")
+    st.markdown("#### ✏️ Editar Carro, Lado y Sector")
 
     _opciones = {
         f"{row['fecha_hora'].strftime('%d/%m/%Y %H:%M')} — {row['sector']}": row["id"]
@@ -317,7 +317,7 @@ def mostrar_modal_orden(orden_actual):
     _id_sel = _opciones[_label_sel]
     _fila_sel = df_det[df_det["id"] == _id_sel].iloc[0]
 
-    col_ec, col_el = st.columns(2)
+    col_ec, col_el, col_es = st.columns([1, 1, 2])
     with col_ec:
         _nuevo_carro = st.number_input(
             "Carro",
@@ -334,15 +334,35 @@ def mostrar_modal_orden(orden_actual):
             key="edit_cl_lado"
         )
 
+    with col_es:
+        from config import SECTORES, SECTORES_ESCANEO_DIRECTO
+        _estados_posibles = ["Entrega", "Terminado", "Dañado"]
+        for sec in SECTORES:
+            if sec not in SECTORES_ESCANEO_DIRECTO:
+                _estados_posibles.append(sec)
+                _estados_posibles.append(f"En Proceso en {sec}")
+                _estados_posibles.append(f"Enviado a {sec}")
+        
+        _sect_actual = str(_fila_sel["sector"] or "").strip()
+        if _sect_actual not in _estados_posibles:
+            _estados_posibles = [_sect_actual] + _estados_posibles
+
+        _nuevo_sector = st.selectbox(
+            "Sector (Estado)",
+            options=_estados_posibles,
+            index=_estados_posibles.index(_sect_actual),
+            key="edit_cl_sector"
+        )
+
     if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True, key="edit_cl_guardar"):
         if pass_input == ADMIN_PASSWORD:
             with conn.session as s:
                 s.execute(
-                    _text("UPDATE registros SET carro = :c, lado = :l WHERE id = :id"),
-                    {"c": _nuevo_carro, "l": _nuevo_lado, "id": int(_id_sel)}
+                    _text("UPDATE registros SET carro = :c, lado = :l, sector = :s WHERE id = :id"),
+                    {"c": _nuevo_carro, "l": _nuevo_lado, "s": _nuevo_sector, "id": int(_id_sel)}
                 )
                 s.commit()
-            st.success(f"✅ Registro actualizado: Carro {_nuevo_carro} / Lado {_nuevo_lado}")
+            st.success(f"✅ Registro actualizado: Carro {_nuevo_carro} / Lado {_nuevo_lado} / Sector {_nuevo_sector}")
             st.rerun()
         elif pass_input:
             st.error("Contraseña incorrecta.")
