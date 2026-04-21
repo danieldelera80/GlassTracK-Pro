@@ -18,6 +18,15 @@ CONTACTO_TEL:     str = "+54 9 3624210356"
 # Contraseña global para acciones críticas — definida en st.secrets, nunca en código
 ADMIN_PASSWORD: str = st.secrets.get("ADMIN_PASSWORD", "")
 
+
+def es_admin_valido(intento: str) -> bool:
+    """
+    Valida una contraseña de admin de forma segura.
+    Devuelve True SOLO si ADMIN_PASSWORD está configurado en secrets Y coincide con `intento`.
+    Cierra el bypass que ocurría cuando ADMIN_PASSWORD quedaba vacío y `pass_input == ""` daba True.
+    """
+    return bool(ADMIN_PASSWORD) and intento == ADMIN_PASSWORD
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  RUTAS Y SECTORES
 # ══════════════════════════════════════════════════════════════════════════════
@@ -130,19 +139,39 @@ def _mostrar_pantalla_error() -> None:
     st.stop()
 
 def _consultar_licencia_online() -> bool | None:
+    """
+    Consulta el JSON de licencia en GitHub.
+
+    Retorna:
+        True  -> licencia confirmada activa
+        False -> licencia explicitamente revocada o vencida (bloquear sistema)
+        None  -> no se pudo verificar (red caida / payload corrupto) -> fail-open: usa FECHA_LIMITE
+    """
+    import urllib.request
+    import urllib.error
+    import json
+    import socket
+
+    # Etapa 1 - red. Cualquier fallo de conectividad/timeout no bloquea al cliente.
     try:
-        import urllib.request
-        import json
         req = urllib.request.Request(LICENCIA_URL, headers={"User-Agent": "GlassTrack/1.0"})
         with urllib.request.urlopen(req, timeout=4) as resp:
-            data = json.loads(resp.read().decode())
-        if not data.get("activo", True): return False
+            raw = resp.read().decode()
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError):
+        return None  # GitHub caido / DNS / sin internet -> fail-open
+
+    # Etapa 2 - parseo. JSON corrupto tampoco bloquea (asumimos transient).
+    try:
+        data = json.loads(raw)
+        if not data.get("activo", True):
+            return False  # revocada explicitamente
         vence_str = data.get("vence", "")
         if vence_str:
-            vence = datetime.strptime(vence_str, "%Y-%m-%d")
-            if datetime.now() > vence: return False
+            if datetime.now() > datetime.strptime(vence_str, "%Y-%m-%d"):
+                return False  # vencida explicitamente
         return True
-    except: return None
+    except (json.JSONDecodeError, ValueError, TypeError, KeyError):
+        return None  # payload corrupto/inesperado -> fail-open
 
 def verificar_licencia() -> None:
     estado = _consultar_licencia_online()

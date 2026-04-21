@@ -192,7 +192,7 @@ def aplicar_estilos(df: pd.DataFrame, entregadas: set, terminadas: set, danadas:
 # ══════════════════════════════════════════════════════════════════════════════
 #  MODAL DE FICHA
 # ══════════════════════════════════════════════════════════════════════════════
-from config import ADMIN_PASSWORD
+from config import ADMIN_PASSWORD, es_admin_valido
 
 @st.dialog("📋 Ficha Interactiva de Orden")
 def mostrar_modal_orden(orden_actual):
@@ -246,7 +246,7 @@ def mostrar_modal_orden(orden_actual):
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("🔥 Urgente", type="primary", use_container_width=True):
-            if pass_input == ADMIN_PASSWORD:
+            if es_admin_valido(pass_input):
                 if "[URGENTE]" not in orden_actual:
                     nuevo = f"[URGENTE] {orden_actual}"
                     with conn.session as s:
@@ -260,7 +260,7 @@ def mostrar_modal_orden(orden_actual):
                 st.error("Contraseña incorrecta.")
     with c2:
         if st.button("🚨 Incidencia", type="primary", use_container_width=True):
-            if pass_input == ADMIN_PASSWORD:
+            if es_admin_valido(pass_input):
                 if "[INCIDENCIA]" not in orden_actual:
                     nuevo = f"[INCIDENCIA] {orden_actual}"
                     with conn.session as s:
@@ -292,7 +292,7 @@ def mostrar_modal_orden(orden_actual):
                 st.error("Contraseña incorrecta.")
     with c3:
         if st.button("🗑️ Eliminar", type="primary", use_container_width=True):
-            if pass_input == ADMIN_PASSWORD:
+            if es_admin_valido(pass_input):
                 with conn.session as s:
                     s.execute(_text("DELETE FROM registros WHERE TRIM(orden) = :v"), {"v": orden_actual})
                     s.commit()
@@ -355,7 +355,7 @@ def mostrar_modal_orden(orden_actual):
         )
 
     if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True, key="edit_cl_guardar"):
-        if pass_input == ADMIN_PASSWORD:
+        if es_admin_valido(pass_input):
             with conn.session as s:
                 s.execute(
                     _text("UPDATE registros SET carro = :c, lado = :l, sector = :s WHERE id = :id"),
