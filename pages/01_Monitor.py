@@ -662,14 +662,17 @@ with tab_prod:
         
         df_todas = df_vista.copy()
 
+        df_incidencias = df_vista[df_vista["Orden"].astype(str).str.contains(r'\[INCIDENCIA\]', case=False, na=False)]
+
         # ── Renderizado de Pestañas ──────────────────────────────────────────
-        tb_todas, tb_urg, tb_proc, tb_term = st.tabs([
+        tb_todas, tb_urg, tb_proc, tb_term, tb_inc = st.tabs([
             f"📋 Todas ({len(df_todas)})",
-            f"🚨 Urgentes ({len(df_urgentes)})", 
-            f"⚙️ En Proceso ({len(df_proceso)})", 
-            f"⏳ Terminados ({len(df_terminados)})"
+            f"🚨 Urgentes ({len(df_urgentes)})",
+            f"⚙️ En Proceso ({len(df_proceso)})",
+            f"⏳ Terminados ({len(df_terminados)})",
+            f"⚠️ Incidencias ({len(df_incidencias)})"
         ])
-        
+
         with tb_todas:
             mostrar_tabla_con_paginado(df_todas, "todas")
         with tb_urg:
@@ -678,6 +681,8 @@ with tab_prod:
             mostrar_tabla_con_paginado(df_proceso, "proceso")
         with tb_term:
             mostrar_tabla_con_paginado(df_terminados, "terminados")
+        with tb_inc:
+            mostrar_tabla_con_paginado(df_incidencias, "incidencias")
 
 
 # ── TAB 2: RENDIMIENTO ───────────────────────────────────────────────────────
