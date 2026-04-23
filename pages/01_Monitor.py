@@ -301,6 +301,52 @@ def mostrar_modal_orden(orden_actual):
             elif pass_input:
                 st.error("Contraseña incorrecta.")
 
+    # ── Quitar incidencia (solo si la orden tiene [INCIDENCIA]) ──────────────
+    if "[INCIDENCIA]" in orden_actual.upper():
+        st.divider()
+        st.markdown("#### 🔓 Quitar estado de incidencia")
+        motivo_quitar = st.text_area(
+            "Motivo de reversión (obligatorio, mín. 5 caracteres):",
+            placeholder="Ej: Cargada por error, problema resuelto...",
+            height=70,
+            key="motivo_quitar_inc"
+        )
+        admin_nombre_quitar = st.text_input(
+            "Tu nombre o inicial (obligatorio):",
+            key="admin_nombre_quitar_inc"
+        )
+        if st.button("🔓 Confirmar quitar incidencia", use_container_width=True, key="btn_quitar_inc"):
+            if not pass_input:
+                st.warning("Ingresá la contraseña de admin arriba.")
+            elif not es_admin_valido(pass_input):
+                st.error("Contraseña incorrecta.")
+            elif len(motivo_quitar.strip()) < 5:
+                st.warning("El motivo debe tener al menos 5 caracteres.")
+            elif not admin_nombre_quitar.strip():
+                st.warning("Ingresá tu nombre o inicial.")
+            else:
+                orden_limpia = re.sub(r'^\[INCIDENCIA\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
+                try:
+                    with conn.session as s:
+                        s.execute(_text("""
+                            INSERT INTO auditoria_incidencias
+                                (orden_original, orden_resultante, admin_usuario, motivo)
+                            VALUES (:original, :resultante, :usuario, :motivo)
+                        """), {
+                            "original": orden_actual,
+                            "resultante": orden_limpia,
+                            "usuario": admin_nombre_quitar.strip(),
+                            "motivo": motivo_quitar.strip()
+                        })
+                        s.execute(_text(
+                            "UPDATE registros SET orden = :limpia WHERE TRIM(orden) = :original"
+                        ), {"limpia": orden_limpia, "original": orden_actual.strip()})
+                        s.commit()
+                    st.success(f"✅ Incidencia revertida. Orden: {orden_limpia}")
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"❌ Error al revertir la incidencia (sin cambios aplicados): {_e}")
+
     # ── Editar carro, lado y sector ───────────────────────────────────────────
     st.divider()
     st.markdown("#### ✏️ Editar Carro, Lado y Sector")
@@ -871,6 +917,26 @@ if tab_admin is not None:
                             st.rerun()
                         except Exception as _e:
                             st.error(f"❌ Error al eliminar: {_e}")
+
+        # ── Historial de incidencias revertidas ───────────────────────────────
+        st.divider()
+        with st.expander("📋 Historial de incidencias revertidas"):
+            df_audit = conn.query(
+                "SELECT fecha_hora, orden_original, orden_resultante, admin_usuario, motivo FROM auditoria_incidencias ORDER BY fecha_hora DESC LIMIT 50",
+                ttl=0
+            )
+            if df_audit is None or df_audit.empty:
+                st.info("No hay reversiones registradas todavía.")
+            else:
+                df_audit_display = df_audit.copy()
+                df_audit_display["fecha_hora"] = (
+                    pd.to_datetime(df_audit_display["fecha_hora"], utc=True)
+                    .dt.tz_convert("America/Argentina/Buenos_Aires")
+                    .dt.tz_localize(None)
+                    .dt.strftime("%d/%m/%Y %H:%M")
+                )
+                df_audit_display.columns = ["Fecha/Hora", "Orden original", "Orden resultante", "Admin", "Motivo"]
+                st.dataframe(df_audit_display, use_container_width=True, hide_index=True)
 
 
 st.divider()

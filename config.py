@@ -86,6 +86,16 @@ def init_db() -> None:
                 fecha_hora TIMESTAMP NOT NULL
             );
         """))
+        s.execute(text("""
+            CREATE TABLE IF NOT EXISTS auditoria_incidencias (
+                id               SERIAL PRIMARY KEY,
+                orden_original   TEXT      NOT NULL,
+                orden_resultante TEXT      NOT NULL,
+                admin_usuario    TEXT      NOT NULL,
+                fecha_hora       TIMESTAMP NOT NULL DEFAULT NOW(),
+                motivo           TEXT
+            );
+        """))
         s.commit()
 
 # ══════════════════════════════════════════════════════════════════════════════
