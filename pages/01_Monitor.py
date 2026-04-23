@@ -22,6 +22,24 @@ verificar_licencia()
 verificar_estado_sistema()
 conn = get_connection()
 
+# Garantiza que la tabla de auditoría existe aunque el usuario no haya pasado por main.py
+try:
+    from sqlalchemy import text as _text_init
+    with conn.session as _s:
+        _s.execute(_text_init("""
+            CREATE TABLE IF NOT EXISTS auditoria_incidencias (
+                id               SERIAL PRIMARY KEY,
+                orden_original   TEXT      NOT NULL,
+                orden_resultante TEXT      NOT NULL,
+                admin_usuario    TEXT      NOT NULL,
+                fecha_hora       TIMESTAMP NOT NULL DEFAULT NOW(),
+                motivo           TEXT
+            )
+        """))
+        _s.commit()
+except Exception:
+    pass
+
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)
 
 st.markdown("""
