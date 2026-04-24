@@ -132,7 +132,7 @@ def render_grupo_maestro_header(maestro: str, n_piezas: int, carro, estado: str 
         f'">'
         f'<span style="font-size:20px;">📋</span>'
         f'<span style="font-size:16px;font-weight:800;color:#e2e8f0;">{maestro}</span>'
-        f'<span style="background:{borde};color:#0f172a;font-size:12px;font-weight:700;'
+        f'<span style="background:#eab308;color:#0f172a;font-size:12px;font-weight:700;'
         f'padding:2px 9px;border-radius:12px;margin-left:4px;">{n_piezas} piezas</span>'
         f'<span style="font-size:12px;color:#94a3b8;margin-left:6px;">Carro {carro}</span>'
         f'</div>',
