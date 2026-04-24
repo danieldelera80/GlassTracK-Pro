@@ -1,7 +1,32 @@
 """
 Componente reutilizable para renderizar una tarjeta de orden con botón de acción.
 """
+import re
 import streamlit as st
+
+# Regex para detectar número maestro y pieza: "9147973-1" o "9147973 1"
+# Acepta cualquier separador de guión o espacio antes del número de pieza final.
+_MAESTRO_RE = re.compile(r'^(.*?)[-\s](\d+)$')
+# Prefijos [URGENTE] / [INCIDENCIA] que se deben ignorar al detectar el maestro
+_PFX_STRIP  = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
+
+
+def agrupar_por_orden_maestra(ordenes: list) -> dict:
+    """
+    Agrupa órdenes por su número maestro.
+
+    Detecta el patrón NNNNNNN-M o NNNNNNN M (guión o espacio como separador).
+    Las órdenes que no coinciden quedan como grupos de 1 elemento.
+    Devuelve dict ordenado {maestro: [lista de dicts de orden]}.
+    """
+    grupos: dict = {}
+    for orden in ordenes:
+        nombre = str(orden.get("orden", ""))
+        base   = _PFX_STRIP.sub("", nombre).strip()
+        m      = _MAESTRO_RE.match(base)
+        clave  = m.group(1).strip() if m else nombre
+        grupos.setdefault(clave, []).append(orden)
+    return grupos
 
 # Colores de borde por estado
 _BORDE = {

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
-from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas
+from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
@@ -639,27 +639,54 @@ elif paso == 2:
             elif not _entrantes_fil:
                 st.warning("No se encontraron órdenes.")
             else:
-                for row in _entrantes_fil:
-                    if render_tarjeta_orden(
-                        row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
-                    ):
-                        ok, err = guardar_registro(
-                            row['orden'], row.get('carro', 0), row.get('lado', '-'),
-                            st.session_state.op_confirmado,
-                            f"En Proceso en {st.session_state.sector_confirmado}"
-                        )
-                        if ok:
-                            agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                            st.session_state.ultimo = {
-                                "orden": row['orden'],
-                                "sector": f"En Proceso en {st.session_state.sector_confirmado}",
-                                "op": st.session_state.op_confirmado,
-                                "offline": err == "OFFLINE"
-                            }
-                            st.session_state.ord_n += 1
-                            st.rerun()
-                        else:
-                            st.error(err)
+                _grupos_ent = agrupar_por_orden_maestra(_entrantes_fil)
+                for _maestro_e, _piezas_e in _grupos_ent.items():
+                    if len(_piezas_e) > 1:
+                        _carro_g = _piezas_e[0].get('carro', '')
+                        with st.expander(f"📄 {_maestro_e} · {len(_piezas_e)} piezas · Carro {_carro_g}"):
+                            for row in _piezas_e:
+                                if render_tarjeta_orden(
+                                    row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
+                                ):
+                                    ok, err = guardar_registro(
+                                        row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                        st.session_state.op_confirmado,
+                                        f"En Proceso en {st.session_state.sector_confirmado}"
+                                    )
+                                    if ok:
+                                        agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                        st.session_state.ultimo = {
+                                            "orden": row['orden'],
+                                            "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                            "op": st.session_state.op_confirmado,
+                                            "offline": err == "OFFLINE"
+                                        }
+                                        st.session_state.ord_n += 1
+                                        st.rerun()
+                                    else:
+                                        st.error(err)
+                    else:
+                        row = _piezas_e[0]
+                        if render_tarjeta_orden(
+                            row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
+                        ):
+                            ok, err = guardar_registro(
+                                row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                st.session_state.op_confirmado,
+                                f"En Proceso en {st.session_state.sector_confirmado}"
+                            )
+                            if ok:
+                                agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                st.session_state.ultimo = {
+                                    "orden": row['orden'],
+                                    "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                    "op": st.session_state.op_confirmado,
+                                    "offline": err == "OFFLINE"
+                                }
+                                st.session_state.ord_n += 1
+                                st.rerun()
+                            else:
+                                st.error(err)
 
         st.write("")
 
@@ -675,18 +702,36 @@ elif paso == 2:
             elif not _en_proceso_fil:
                 st.warning("No se encontraron órdenes.")
             else:
-                for row in _en_proceso_fil:
-                    _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
-                    if render_tarjeta_orden(
-                        row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                        estado="en_proceso", meta_texto=_meta_proc
-                    ):
-                        st.session_state.orden_val    = row['orden']
-                        st.session_state.carro_previo = int(row.get('carro') or 0)
-                        st.session_state.lado_previo  = str(row.get('lado') or 'A')
-                        st.session_state.paso3_fresh  = True
-                        st.session_state.paso         = 4  # despachar directo
-                        st.rerun()
+                _grupos_proc = agrupar_por_orden_maestra(_en_proceso_fil)
+                for _maestro_p, _piezas_p in _grupos_proc.items():
+                    if len(_piezas_p) > 1:
+                        _carro_g = _piezas_p[0].get('carro', '')
+                        with st.expander(f"⚙️ {_maestro_p} · {len(_piezas_p)} piezas · Carro {_carro_g}"):
+                            for row in _piezas_p:
+                                _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
+                                if render_tarjeta_orden(
+                                    row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                    estado="en_proceso", meta_texto=_meta_proc
+                                ):
+                                    st.session_state.orden_val    = row['orden']
+                                    st.session_state.carro_previo = int(row.get('carro') or 0)
+                                    st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                                    st.session_state.paso3_fresh  = True
+                                    st.session_state.paso         = 4  # despachar directo
+                                    st.rerun()
+                    else:
+                        row = _piezas_p[0]
+                        _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
+                        if render_tarjeta_orden(
+                            row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                            estado="en_proceso", meta_texto=_meta_proc
+                        ):
+                            st.session_state.orden_val    = row['orden']
+                            st.session_state.carro_previo = int(row.get('carro') or 0)
+                            st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                            st.session_state.paso3_fresh  = True
+                            st.session_state.paso         = 4  # despachar directo
+                            st.rerun()
 
     # ── KANBAN ENTREGA ────────────────────────────────────────────────────────
     if es_entrega:
@@ -702,17 +747,34 @@ elif paso == 2:
             elif not _pendientes_fil:
                 st.warning("No se encontraron órdenes.")
             else:
-                for row in _pendientes_fil:
-                    _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
-                    if render_tarjeta_orden(
-                        row, "🚀 ENTREGAR", f"ent_{row['orden']}",
-                        estado="terminado", meta_texto=_meta_ent
-                    ):
-                        st.session_state.orden_val     = row['orden']
-                        st.session_state.carro_previo  = int(row.get('carro') or 0)
-                        st.session_state.lado_previo   = str(row.get('lado') or '-')
-                        st.session_state.entrega_lista = True
-                        st.rerun()
+                _grupos_pend = agrupar_por_orden_maestra(_pendientes_fil)
+                for _maestro_d, _piezas_d in _grupos_pend.items():
+                    if len(_piezas_d) > 1:
+                        _carro_g = _piezas_d[0].get('carro', '')
+                        with st.expander(f"📦 {_maestro_d} · {len(_piezas_d)} piezas · Carro {_carro_g}"):
+                            for row in _piezas_d:
+                                _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
+                                if render_tarjeta_orden(
+                                    row, "🚀 ENTREGAR", f"ent_{row['orden']}",
+                                    estado="terminado", meta_texto=_meta_ent
+                                ):
+                                    st.session_state.orden_val     = row['orden']
+                                    st.session_state.carro_previo  = int(row.get('carro') or 0)
+                                    st.session_state.lado_previo   = str(row.get('lado') or '-')
+                                    st.session_state.entrega_lista = True
+                                    st.rerun()
+                    else:
+                        row = _piezas_d[0]
+                        _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
+                        if render_tarjeta_orden(
+                            row, "🚀 ENTREGAR", f"ent_{row['orden']}",
+                            estado="terminado", meta_texto=_meta_ent
+                        ):
+                            st.session_state.orden_val     = row['orden']
+                            st.session_state.carro_previo  = int(row.get('carro') or 0)
+                            st.session_state.lado_previo   = str(row.get('lado') or '-')
+                            st.session_state.entrega_lista = True
+                            st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
