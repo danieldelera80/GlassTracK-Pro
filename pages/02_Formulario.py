@@ -59,7 +59,7 @@ CAMARA_DISPONIBLE = True
 SECTOR_ENTREGA   = "Entrega"
 SECTOR_TERMINADO = "Terminado"
 _ARG_TZ = timezone(timedelta(hours=-3))
-_PFX_RE = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
+_PFX_RE = re.compile(r'^(?:\s*\[(?:URGENTE|INCIDENCIA)\]\s*)+', re.IGNORECASE)
 
 
 def _now_utc():

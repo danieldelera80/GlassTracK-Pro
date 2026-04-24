@@ -119,7 +119,7 @@ def cargar_datos():
     )
     df_total["orden"] = df_total["orden"].astype(str).str.strip()
 
-    _pfx = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
+    _pfx = re.compile(r'^(?:\s*\[(?:URGENTE|INCIDENCIA)\]\s*)+', re.IGNORECASE)
     df_total["_base"] = df_total["orden"].apply(lambda x: _pfx.sub("", x).strip())
     _bases_urg = set(df_total.loc[df_total["orden"].str.contains(r'\[URGENTE\]', case=False, na=False), "_base"])
     _bases_inc = set(df_total.loc[df_total["orden"].str.contains(r'\[INCIDENCIA\]', case=False, na=False), "_base"]) - _bases_urg
@@ -242,7 +242,7 @@ def mostrar_modal_orden(orden_actual):
     st.info(f"📌 **Tiempo en planta:** {delta.components.days} días y {delta.components.hours} horas.")
 
     # Mostrar detalle de incidencia si ya existe
-    _base_orden = re.sub(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
+    _base_orden = re.sub(r'^(?:\s*\[(?:URGENTE|INCIDENCIA)\]\s*)+', '', orden_actual, flags=re.IGNORECASE).strip()
     if "[INCIDENCIA]" in orden_actual.upper():
         df_inc_det = conn.query(
             "SELECT detalle, fecha_hora FROM incidencias_detalle WHERE orden_base = :base",
@@ -343,7 +343,7 @@ def mostrar_modal_orden(orden_actual):
             elif not admin_nombre_quitar.strip():
                 st.warning("Ingresá tu nombre o inicial.")
             else:
-                orden_limpia = re.sub(r'^\[INCIDENCIA\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
+                orden_limpia = re.sub(r'\[INCIDENCIA\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
                 try:
                     with conn.session as s:
                         s.execute(_text("""
