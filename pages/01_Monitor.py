@@ -215,9 +215,22 @@ from config import ADMIN_PASSWORD, es_admin_valido
 @st.dialog("📋 Ficha Interactiva de Orden")
 def mostrar_modal_orden(orden_actual):
     from sqlalchemy import text as _text
+    _pfx_re = re.compile(r'^(?:\s*\[(?:URGENTE|INCIDENCIA)\]\s*)+', re.IGNORECASE)
+    _base_modal = _pfx_re.sub("", orden_actual).strip()
     df_det = conn.query(
-        "SELECT * FROM registros WHERE TRIM(orden) = :ord ORDER BY fecha_hora ASC",
-        params={"ord": orden_actual}, ttl=0
+        """SELECT * FROM registros
+           WHERE TRIM(orden) = :exact
+              OR TRIM(orden) = :base
+              OR TRIM(orden) ILIKE :urg
+              OR TRIM(orden) ILIKE :inc
+           ORDER BY fecha_hora ASC""",
+        params={
+            "exact": orden_actual,
+            "base":  _base_modal,
+            "urg":   f"[URGENTE] {_base_modal}",
+            "inc":   f"[INCIDENCIA] {_base_modal}",
+        },
+        ttl=0
     )
     if df_det is None or df_det.empty:
         st.warning("No hay registros históricos.")
