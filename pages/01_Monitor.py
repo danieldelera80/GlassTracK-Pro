@@ -619,7 +619,12 @@ with tab_prod:
 
     # ── Alertas urgentes ─────────────────────────────────────────────────────
     if not df_total.empty:
-        _urgentes = [o for o in df_total["orden"].unique() if "[URGENTE]" in str(o).upper() and o not in entregadas]
+        _urgentes = [
+            o for o in df_total["orden"].unique()
+            if "[URGENTE]" in str(o).upper()
+            and o not in entregadas
+            and o not in terminadas
+        ]
         for _i, _urg in enumerate(_urgentes):
             _sector_urg = df_total[df_total["orden"] == _urg].sort_values("fecha_hora", ascending=False).iloc[0]["sector"]
             _col_banner, _col_btn = st.columns([8, 1])
