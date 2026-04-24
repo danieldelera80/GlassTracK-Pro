@@ -8,7 +8,7 @@ from pathlib import Path
 
 from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
-from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra
+from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra, render_grupo_maestro_header
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
@@ -651,7 +651,8 @@ elif paso == 2:
                 for _maestro_e, _piezas_e in _visible_e:
                     if len(_piezas_e) > 1:
                         _carro_g = _piezas_e[0].get('carro', '')
-                        with st.expander(f"📄 {_maestro_e} · {len(_piezas_e)} piezas · Carro {_carro_g}"):
+                        render_grupo_maestro_header(_maestro_e, len(_piezas_e), _carro_g, estado="pendiente")
+                        with st.expander("ver piezas", expanded=False):
                             for row in _piezas_e:
                                 if render_tarjeta_orden(
                                     row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
@@ -727,7 +728,8 @@ elif paso == 2:
                 for _maestro_p, _piezas_p in _visible_p:
                     if len(_piezas_p) > 1:
                         _carro_g = _piezas_p[0].get('carro', '')
-                        with st.expander(f"⚙️ {_maestro_p} · {len(_piezas_p)} piezas · Carro {_carro_g}"):
+                        render_grupo_maestro_header(_maestro_p, len(_piezas_p), _carro_g, estado="en_proceso")
+                        with st.expander("ver piezas", expanded=False):
                             for row in _piezas_p:
                                 _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                                 if render_tarjeta_orden(
@@ -784,7 +786,8 @@ elif paso == 2:
                 for _maestro_d, _piezas_d in _visible_d:
                     if len(_piezas_d) > 1:
                         _carro_g = _piezas_d[0].get('carro', '')
-                        with st.expander(f"📦 {_maestro_d} · {len(_piezas_d)} piezas · Carro {_carro_g}"):
+                        render_grupo_maestro_header(_maestro_d, len(_piezas_d), _carro_g, estado="terminado")
+                        with st.expander("ver piezas", expanded=False):
                             for row in _piezas_d:
                                 _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                                 if render_tarjeta_orden(

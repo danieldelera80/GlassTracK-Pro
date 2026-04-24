@@ -112,6 +112,34 @@ def inyectar_css_tarjetas():
     """, unsafe_allow_html=True)
 
 
+def render_grupo_maestro_header(maestro: str, n_piezas: int, carro, estado: str = "pendiente") -> None:
+    """Encabezado visual diferenciado para un grupo de subórdenes."""
+    borde = _BORDE.get(estado, _BORDE["pendiente"])
+    fondo_claro = {
+        "pendiente":  "#1a2f4a",
+        "en_proceso": "#2a1f08",
+        "danado":     "#3d0f0f",
+        "terminado":  "#0f3320",
+    }.get(estado, "#1a2f4a")
+    st.markdown(
+        f'<div style="'
+        f'background:{fondo_claro};'
+        f'border-left:5px solid {borde};'
+        f'border-radius:8px;'
+        f'padding:10px 14px;'
+        f'margin-bottom:4px;'
+        f'display:flex;align-items:center;gap:10px;'
+        f'">'
+        f'<span style="font-size:20px;">📋</span>'
+        f'<span style="font-size:16px;font-weight:800;color:#e2e8f0;">{maestro}</span>'
+        f'<span style="background:{borde};color:#0f172a;font-size:12px;font-weight:700;'
+        f'padding:2px 9px;border-radius:12px;margin-left:4px;">{n_piezas} piezas</span>'
+        f'<span style="font-size:12px;color:#94a3b8;margin-left:6px;">Carro {carro}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_tarjeta_orden(
     orden: dict,
     accion_label: str,
