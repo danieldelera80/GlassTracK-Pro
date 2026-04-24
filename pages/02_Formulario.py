@@ -655,7 +655,7 @@ elif paso == 2:
                         with st.expander("ver piezas", expanded=False):
                             for row in _piezas_e:
                                 if render_tarjeta_orden(
-                                    row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
+                                    row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente", dentro_de_grupo=True
                                 ):
                                     ok, err = guardar_registro(
                                         row['orden'], row.get('carro', 0), row.get('lado', '-'),
@@ -734,7 +734,7 @@ elif paso == 2:
                                 _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                                 if render_tarjeta_orden(
                                     row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                                    estado="en_proceso", meta_texto=_meta_proc
+                                    estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True
                                 ):
                                     st.session_state.orden_val    = row['orden']
                                     st.session_state.carro_previo = int(row.get('carro') or 0)
@@ -792,7 +792,7 @@ elif paso == 2:
                                 _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                                 if render_tarjeta_orden(
                                     row, "🚀 ENTREGAR", f"ent_{row['orden']}",
-                                    estado="terminado", meta_texto=_meta_ent
+                                    estado="terminado", meta_texto=_meta_ent, dentro_de_grupo=True
                                 ):
                                     st.session_state.orden_val     = row['orden']
                                     st.session_state.carro_previo  = int(row.get('carro') or 0)

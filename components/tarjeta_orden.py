@@ -146,6 +146,7 @@ def render_tarjeta_orden(
     accion_key: str,
     estado: str = "pendiente",
     meta_texto: str | None = None,
+    dentro_de_grupo: bool = False,
 ) -> bool:
     """
     Renderiza la tarjeta de una orden + botón de acción.
@@ -172,6 +173,10 @@ def render_tarjeta_orden(
     fondo = _FONDO.get(estado_visual, _FONDO["pendiente"])
     color = _COLOR_ORDEN.get(estado_visual, _COLOR_ORDEN["pendiente"])
     icono = _ICONO.get(estado, _ICONO["pendiente"])
+
+    if dentro_de_grupo:
+        fondo = "#ffffff"
+        color = "#0f172a"
 
     badges = ""
     if es_urgente:
