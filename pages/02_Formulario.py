@@ -639,8 +639,16 @@ elif paso == 2:
             elif not _entrantes_fil:
                 st.warning("No se encontraron órdenes.")
             else:
-                _grupos_ent = agrupar_por_orden_maestra(_entrantes_fil)
-                for _maestro_e, _piezas_e in _grupos_ent.items():
+                _sk = st.session_state.sector_confirmado
+                _pkey_e = f"pag_ent_{_sk}"
+                if st.session_state.get(f"_psrch_ent_{_sk}") != _buscar_ent:
+                    st.session_state[_pkey_e] = 20
+                    st.session_state[f"_psrch_ent_{_sk}"] = _buscar_ent
+                _lim_e = st.session_state.get(_pkey_e, 20)
+                _grupos_ent  = agrupar_por_orden_maestra(_entrantes_fil)
+                _glist_e     = list(_grupos_ent.items())
+                _visible_e   = _glist_e[:_lim_e]
+                for _maestro_e, _piezas_e in _visible_e:
                     if len(_piezas_e) > 1:
                         _carro_g = _piezas_e[0].get('carro', '')
                         with st.expander(f"📄 {_maestro_e} · {len(_piezas_e)} piezas · Carro {_carro_g}"):
@@ -687,6 +695,11 @@ elif paso == 2:
                                 st.rerun()
                             else:
                                 st.error(err)
+                _resto_e = len(_glist_e) - _lim_e
+                if _resto_e > 0:
+                    if st.button(f"Mostrar más ({_resto_e} restantes)", key=f"mas_ent_{_sk}"):
+                        st.session_state[_pkey_e] = _lim_e + 20
+                        st.rerun()
 
         st.write("")
 
@@ -702,8 +715,16 @@ elif paso == 2:
             elif not _en_proceso_fil:
                 st.warning("No se encontraron órdenes.")
             else:
+                _sk = st.session_state.sector_confirmado
+                _pkey_p = f"pag_proc_{_sk}"
+                if st.session_state.get(f"_psrch_proc_{_sk}") != _buscar_proc:
+                    st.session_state[_pkey_p] = 20
+                    st.session_state[f"_psrch_proc_{_sk}"] = _buscar_proc
+                _lim_p = st.session_state.get(_pkey_p, 20)
                 _grupos_proc = agrupar_por_orden_maestra(_en_proceso_fil)
-                for _maestro_p, _piezas_p in _grupos_proc.items():
+                _glist_p     = list(_grupos_proc.items())
+                _visible_p   = _glist_p[:_lim_p]
+                for _maestro_p, _piezas_p in _visible_p:
                     if len(_piezas_p) > 1:
                         _carro_g = _piezas_p[0].get('carro', '')
                         with st.expander(f"⚙️ {_maestro_p} · {len(_piezas_p)} piezas · Carro {_carro_g}"):
@@ -732,6 +753,11 @@ elif paso == 2:
                             st.session_state.paso3_fresh  = True
                             st.session_state.paso         = 4  # despachar directo
                             st.rerun()
+                _resto_p = len(_glist_p) - _lim_p
+                if _resto_p > 0:
+                    if st.button(f"Mostrar más ({_resto_p} restantes)", key=f"mas_proc_{_sk}"):
+                        st.session_state[_pkey_p] = _lim_p + 20
+                        st.rerun()
 
     # ── KANBAN ENTREGA ────────────────────────────────────────────────────────
     if es_entrega:
@@ -747,8 +773,15 @@ elif paso == 2:
             elif not _pendientes_fil:
                 st.warning("No se encontraron órdenes.")
             else:
+                _pkey_d = "pag_entrega"
+                if st.session_state.get("_psrch_entrega") != _buscar_pend:
+                    st.session_state[_pkey_d] = 20
+                    st.session_state["_psrch_entrega"] = _buscar_pend
+                _lim_d = st.session_state.get(_pkey_d, 20)
                 _grupos_pend = agrupar_por_orden_maestra(_pendientes_fil)
-                for _maestro_d, _piezas_d in _grupos_pend.items():
+                _glist_d     = list(_grupos_pend.items())
+                _visible_d   = _glist_d[:_lim_d]
+                for _maestro_d, _piezas_d in _visible_d:
                     if len(_piezas_d) > 1:
                         _carro_g = _piezas_d[0].get('carro', '')
                         with st.expander(f"📦 {_maestro_d} · {len(_piezas_d)} piezas · Carro {_carro_g}"):
@@ -775,6 +808,11 @@ elif paso == 2:
                             st.session_state.lado_previo   = str(row.get('lado') or '-')
                             st.session_state.entrega_lista = True
                             st.rerun()
+                _resto_d = len(_glist_d) - _lim_d
+                if _resto_d > 0:
+                    if st.button(f"Mostrar más ({_resto_d} restantes)", key="mas_entrega"):
+                        st.session_state[_pkey_d] = _lim_d + 20
+                        st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
