@@ -83,9 +83,9 @@ def inyectar_css_tarjetas():
         letter-spacing: 0.3px;
     }
     .orden-card .orden-meta {
-        font-size: 13px;
-        font-weight: 600;
-        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 700;
+        color: #ffffff;
         margin-top: 5px;
         letter-spacing: 0.2px;
     }
