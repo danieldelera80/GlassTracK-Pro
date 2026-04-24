@@ -77,13 +77,16 @@ def inyectar_css_tarjetas():
     }
     .orden-card:hover { filter: brightness(1.12); }
     .orden-card .orden-num {
-        font-size: 17px;
-        font-weight: bold;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.3px;
     }
     .orden-card .orden-meta {
-        font-size: 12px;
-        color: #94a3b8;
-        margin-top: 4px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-top: 5px;
+        letter-spacing: 0.2px;
     }
     .badge-urgente {
         background: #ef4444;
