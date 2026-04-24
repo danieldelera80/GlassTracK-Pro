@@ -365,6 +365,52 @@ def mostrar_modal_orden(orden_actual):
                 except Exception as _e:
                     st.error(f"❌ Error al revertir la incidencia (sin cambios aplicados): {_e}")
 
+    # ── Quitar urgencia (solo si la orden tiene [URGENTE]) ────────────────────
+    if "[URGENTE]" in orden_actual.upper():
+        st.divider()
+        st.markdown("#### ⚡ Quitar estado de urgencia")
+        motivo_quitar_urg = st.text_area(
+            "Motivo de reversión (obligatorio, mín. 5 caracteres):",
+            placeholder="Ej: Cargada por error, urgencia resuelta...",
+            height=70,
+            key="motivo_quitar_urg"
+        )
+        admin_nombre_quitar_urg = st.text_input(
+            "Tu nombre o inicial (obligatorio):",
+            key="admin_nombre_quitar_urg"
+        )
+        if st.button("⚡ Confirmar quitar urgencia", use_container_width=True, key="btn_quitar_urg"):
+            if not pass_input:
+                st.warning("Ingresá la contraseña de admin arriba.")
+            elif not es_admin_valido(pass_input):
+                st.error("Contraseña incorrecta.")
+            elif len(motivo_quitar_urg.strip()) < 5:
+                st.warning("El motivo debe tener al menos 5 caracteres.")
+            elif not admin_nombre_quitar_urg.strip():
+                st.warning("Ingresá tu nombre o inicial.")
+            else:
+                orden_limpia_urg = re.sub(r'\[URGENTE\]\s*', '', orden_actual, flags=re.IGNORECASE).strip()
+                try:
+                    with conn.session as s:
+                        s.execute(_text("""
+                            INSERT INTO auditoria_incidencias
+                                (orden_original, orden_resultante, admin_usuario, motivo)
+                            VALUES (:original, :resultante, :usuario, :motivo)
+                        """), {
+                            "original": orden_actual,
+                            "resultante": orden_limpia_urg,
+                            "usuario": admin_nombre_quitar_urg.strip(),
+                            "motivo": motivo_quitar_urg.strip()
+                        })
+                        s.execute(_text(
+                            "UPDATE registros SET orden = :limpia WHERE TRIM(orden) = :original"
+                        ), {"limpia": orden_limpia_urg, "original": orden_actual.strip()})
+                        s.commit()
+                    st.success(f"✅ Urgencia revertida. Orden: {orden_limpia_urg}")
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"❌ Error al revertir la urgencia: {_e}")
+
     # ── Editar carro, lado y sector ───────────────────────────────────────────
     st.divider()
     st.markdown("#### ✏️ Editar Carro, Lado y Sector")
