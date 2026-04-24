@@ -703,21 +703,16 @@ elif paso == 2:
                 st.warning("No se encontraron órdenes.")
             else:
                 for row in _pendientes_fil:
-                    col_info, col_btn = st.columns([7, 3])
-                    with col_info:
-                        st.markdown(f"""
-                        <div style="background:#0d2a1a;border-left:4px solid #4ada75;border-radius:6px;
-                                    padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-size:15px;font-weight:bold;color:#4ada75;">📦 {row['orden']}</span>
-                            <span style="font-size:11px;color:#86efac;">🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}</span>
-                        </div>""", unsafe_allow_html=True)
-                    with col_btn:
-                        if st.button("🚀 ENTREGAR", key=f"ent_{row['orden']}", use_container_width=True):
-                            st.session_state.orden_val     = row['orden']
-                            st.session_state.carro_previo  = int(row.get('carro') or 0)
-                            st.session_state.lado_previo   = str(row.get('lado') or '-')
-                            st.session_state.entrega_lista = True
-                            st.rerun()
+                    _meta_ent = f"🛒 {row['carro']} · {row['lado']} · {row['fecha_hora']}"
+                    if render_tarjeta_orden(
+                        row, "🚀 ENTREGAR", f"ent_{row['orden']}",
+                        estado="terminado", meta_texto=_meta_ent
+                    ):
+                        st.session_state.orden_val     = row['orden']
+                        st.session_state.carro_previo  = int(row.get('carro') or 0)
+                        st.session_state.lado_previo   = str(row.get('lado') or '-')
+                        st.session_state.entrega_lista = True
+                        st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
