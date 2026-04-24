@@ -3,8 +3,6 @@ Componente reutilizable para renderizar una tarjeta de orden con botón de acci�
 """
 import streamlit as st
 
-_CSS_INYECTADO = False
-
 # Colores de borde por estado
 _BORDE = {
     "pendiente":  "#3b82f6",   # azul
@@ -39,10 +37,7 @@ _ICONO = {
 
 
 def inyectar_css_tarjetas():
-    """Inyecta el CSS de tarjetas una sola vez por página."""
-    global _CSS_INYECTADO
-    if _CSS_INYECTADO:
-        return
+    """Inyecta el CSS de tarjetas. Llamar una vez al inicio de cada página."""
     st.markdown("""
     <style>
     .orden-card {
@@ -90,7 +85,6 @@ def inyectar_css_tarjetas():
     }
     </style>
     """, unsafe_allow_html=True)
-    _CSS_INYECTADO = True
 
 
 def render_tarjeta_orden(
@@ -98,6 +92,7 @@ def render_tarjeta_orden(
     accion_label: str,
     accion_key: str,
     estado: str = "pendiente",
+    meta_texto: str | None = None,
 ) -> bool:
     """
     Renderiza la tarjeta de una orden + botón de acción.
@@ -105,17 +100,19 @@ def render_tarjeta_orden(
     Devuelve True si el botón fue clickeado, False si no.
 
     Parámetros:
-        orden        : dict con claves orden, carro, lado, usuario, fecha_hora
-        accion_label : texto del botón (ej. "↘️ TOMAR")
-        accion_key   : key único de Streamlit para el botón
-        estado       : "pendiente" | "en_proceso" | "danado" | "terminado"
+        orden       : dict con claves orden, carro, lado, usuario, fecha_hora
+        accion_label: texto del botón (ej. "↘️ TOMAR")
+        accion_key  : key único de Streamlit para el botón
+        estado      : "pendiente" | "en_proceso" | "danado" | "terminado"
+        meta_texto  : texto de la línea de metadatos; si es None se construye
+                      automáticamente a partir de carro/lado/usuario/fecha_hora
     """
     nombre = str(orden.get("orden", ""))
     nombre_up = nombre.upper()
     es_urgente    = "[URGENTE]"    in nombre_up
     es_incidencia = "[INCIDENCIA]" in nombre_up
 
-    # Si es urgente, el estado visual siempre es "danado" (rojo)
+    # Si es urgente el estado visual siempre es rojo
     estado_visual = "danado" if es_urgente else estado
 
     borde = _BORDE.get(estado_visual, _BORDE["pendiente"])
@@ -129,22 +126,23 @@ def render_tarjeta_orden(
     if es_incidencia:
         badges += '<span class="badge-incidencia">INCIDENCIA</span>'
 
-    usuario    = orden.get("usuario", "")
-    carro      = orden.get("carro", "")
-    lado       = orden.get("lado", "")
-    fecha_hora = orden.get("fecha_hora", "")
-
-    # Línea de metadatos: omitir campos vacíos
-    meta_partes = [f"🛒 Carro {carro}" if carro != "" else None,
-                   f"Lado {lado}"       if lado       else None,
-                   str(usuario)         if usuario    else None,
-                   str(fecha_hora)      if fecha_hora else None]
-    meta = " · ".join(p for p in meta_partes if p)
+    if meta_texto is None:
+        carro      = orden.get("carro", "")
+        lado       = orden.get("lado", "")
+        usuario    = orden.get("usuario", "")
+        fecha_hora = orden.get("fecha_hora", "")
+        partes = [
+            f"🛒 Carro {carro}" if carro != "" else None,
+            f"Lado {lado}"      if lado         else None,
+            str(usuario)        if usuario       else None,
+            str(fecha_hora)     if fecha_hora    else None,
+        ]
+        meta_texto = " · ".join(p for p in partes if p)
 
     st.markdown(
         f'<div class="orden-card" style="background:{fondo};--borde:{borde};">'
         f'  <div class="orden-num" style="color:{color};">{icono} {nombre}{badges}</div>'
-        f'  <div class="orden-meta">{meta}</div>'
+        f'  <div class="orden-meta">{meta_texto}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )

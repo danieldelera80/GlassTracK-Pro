@@ -8,6 +8,7 @@ from pathlib import Path
 
 from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
+from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
@@ -621,6 +622,7 @@ elif paso == 2:
 
     # ── KANBAN DE PRODUCCIÓN ──────────────────────────────────────────────────
     st.markdown("<hr style='margin:24px 0 16px;border:1px dashed #334155;'>", unsafe_allow_html=True)
+    inyectar_css_tarjetas()
 
     if not es_terminado and not es_entrega:
         entrantes, en_proceso = obtener_activos(st.session_state.sector_confirmado)
@@ -638,18 +640,9 @@ elif paso == 2:
                 st.warning("No se encontraron órdenes.")
             else:
                 for row in _entrantes_fil:
-                    _urg = "[URGENTE]" in str(row['orden']).upper()
-                    _bg  = "#2d0a0a" if _urg else "#1e293b"
-                    _brd = "#ef4444" if _urg else "#3b82f6"
-                    _badge = ' <span style="background:#ef4444;color:#fff;font-size:11px;padding:1px 6px;border-radius:4px;font-weight:bold;margin-left:6px;">URGENTE</span>' if _urg else ""
-                    st.markdown(f"""
-                    <div style="background:{_bg};border-left:4px solid {_brd};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-                        <div style="font-size:17px;font-weight:bold;color:#60a5fa;">📄 {row['orden']}{_badge}</div>
-                        <div style="font-size:12px;color:#94a3b8;margin-top:4px;">
-                            🛒 Carro {row['carro']} · Lado {row['lado']} · {row['usuario']} · {row['fecha_hora']}
-                        </div>
-                    </div>""", unsafe_allow_html=True)
-                    if st.button(f"↘️ TOMAR — {row['orden']}", key=f"rec_{row['orden']}", use_container_width=True):
+                    if render_tarjeta_orden(
+                        row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}", estado="pendiente"
+                    ):
                         ok, err = guardar_registro(
                             row['orden'], row.get('carro', 0), row.get('lado', '-'),
                             st.session_state.op_confirmado,
@@ -683,18 +676,11 @@ elif paso == 2:
                 st.warning("No se encontraron órdenes.")
             else:
                 for row in _en_proceso_fil:
-                    _urg = "[URGENTE]" in str(row['orden']).upper()
-                    _bg  = "#2d0a0a" if _urg else "#1f1605"
-                    _brd = "#ef4444" if _urg else "#eab308"
-                    _badge = ' <span style="background:#ef4444;color:#fff;font-size:11px;padding:1px 6px;border-radius:4px;font-weight:bold;margin-left:6px;">URGENTE</span>' if _urg else ""
-                    st.markdown(f"""
-                    <div style="background:{_bg};border-left:4px solid {_brd};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
-                        <div style="font-size:17px;font-weight:bold;color:#facc15;">⚙️ {row['orden']}{_badge}</div>
-                        <div style="font-size:12px;color:#a1a1aa;margin-top:4px;">
-                            🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}
-                        </div>
-                    </div>""", unsafe_allow_html=True)
-                    if st.button(f"📤 DESPACHAR — {row['orden']}", key=f"fin_{row['orden']}", use_container_width=True):
+                    _meta_proc = f"🛒 Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
+                    if render_tarjeta_orden(
+                        row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                        estado="en_proceso", meta_texto=_meta_proc
+                    ):
                         st.session_state.orden_val    = row['orden']
                         st.session_state.carro_previo = int(row.get('carro') or 0)
                         st.session_state.lado_previo  = str(row.get('lado') or 'A')
