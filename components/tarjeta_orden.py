@@ -179,8 +179,11 @@ def render_tarjeta_orden(
     icono = _ICONO.get(estado, _ICONO["pendiente"])
 
     if dentro_de_grupo:
-        fondo = "#1e293b"
-        color = "#e2e8f0"
+        fondo = "#ffffff"
+        color = "#0f172a"
+        meta_color = "#334155"
+    else:
+        meta_color = "#ffffff"
 
     badges = ""
     if es_urgente:
@@ -205,7 +208,7 @@ def render_tarjeta_orden(
     st.markdown(
         f'<div class="{clases}" style="background:{fondo};--borde:{borde};">'
         f'  <div class="orden-num" style="color:{color};">{icono} {nombre}{badges}</div>'
-        f'  <div class="orden-meta">{meta_texto}</div>'
+        f'  <div class="orden-meta" style="color:{meta_color};">{meta_texto}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
