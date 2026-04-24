@@ -75,7 +75,8 @@ def inyectar_css_tarjetas():
         line-height: 1.4;
         transition: background 0.15s;
     }
-    .orden-card:hover { filter: brightness(1.12); }
+    .orden-card:hover { filter: brightness(1.06); }
+    .orden-card.en-grupo:hover { filter: none; }
     .orden-card .orden-num {
         font-size: 18px;
         font-weight: 900;
@@ -178,8 +179,8 @@ def render_tarjeta_orden(
     icono = _ICONO.get(estado, _ICONO["pendiente"])
 
     if dentro_de_grupo:
-        fondo = "#ffffff"
-        color = "#0f172a"
+        fondo = "#1e293b"
+        color = "#e2e8f0"
 
     badges = ""
     if es_urgente:
@@ -200,8 +201,9 @@ def render_tarjeta_orden(
         ]
         meta_texto = " · ".join(p for p in partes if p)
 
+    clases = "orden-card en-grupo" if dentro_de_grupo else "orden-card"
     st.markdown(
-        f'<div class="orden-card" style="background:{fondo};--borde:{borde};">'
+        f'<div class="{clases}" style="background:{fondo};--borde:{borde};">'
         f'  <div class="orden-num" style="color:{color};">{icono} {nombre}{badges}</div>'
         f'  <div class="orden-meta">{meta_texto}</div>'
         f'</div>',
