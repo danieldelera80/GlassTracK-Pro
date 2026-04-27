@@ -9,7 +9,7 @@ from pathlib import Path
 from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
 from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra, render_grupo_maestro_header
-from streamlit_qrcode_scanner import qrcode_scanner
+from components.camara_foto import capturar_foto as qrcode_scanner
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
