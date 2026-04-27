@@ -9,6 +9,7 @@ from pathlib import Path
 from config import SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia, get_connection, verificar_estado_sistema
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
 from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra, render_grupo_maestro_header
+from streamlit_qrcode_scanner import qrcode_scanner
 
 st.set_page_config(page_title="Carga de Producción", page_icon="📋", layout="centered")
 
@@ -525,32 +526,24 @@ elif paso == 2:
                 st.rerun()
     else:
         # ── MODO CÁMARA ───────────────────────────────────────────────────────
-        st.caption("📸 Sacá foto a la etiqueta.")
-        foto = st.camera_input("Capturar", key=f"_cam_{st.session_state.ord_n}", label_visibility="collapsed")
-        if foto is not None:
-            codigo_auto = decodificar_imagen(foto)
-            if codigo_auto:
-                st.success(f"✅ Código detectado: **{codigo_auto}**")
-                procesar_orden(codigo_auto)
-                st.session_state.ord_n += 1
-                st.rerun()
-            else:
-                st.markdown('<div style="font-size:13px;color:#f0c040;margin-bottom:6px;">👀 Ingresá el número de la etiqueta:</div>', unsafe_allow_html=True)
-                cod_manual = st.text_input("Código", key=f"_cam_manual_{st.session_state.ord_n}",
-                                           placeholder="Ej: 65365-3", label_visibility="collapsed")
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("✅ Confirmar", use_container_width=True, type="primary", key=f"_cam_ok_{st.session_state.ord_n}"):
-                        if cod_manual.strip():
-                            procesar_orden(cod_manual.strip())
-                            st.session_state.ord_n += 1
-                            st.rerun()
-                        else:
-                            st.warning("Ingresá el código.")
-                with c2:
-                    if st.button("🔄 Otra foto", use_container_width=True, key=f"_cam_retry_{st.session_state.ord_n}"):
-                        st.session_state.ord_n += 1
-                        st.rerun()
+        st.caption("📸 Apuntá la cámara al código de barras.")
+        codigo_auto = qrcode_scanner(key=f"_cam_{st.session_state.ord_n}")
+        if codigo_auto:
+            st.success(f"✅ Código detectado: **{codigo_auto}**")
+            procesar_orden(codigo_auto)
+            st.session_state.ord_n += 1
+            st.rerun()
+        else:
+            st.markdown('<div style="font-size:13px;color:#f0c040;margin-bottom:6px;">👀 Ingresá el número de la etiqueta:</div>', unsafe_allow_html=True)
+            cod_manual = st.text_input("Código", key=f"_cam_manual_{st.session_state.ord_n}",
+                                       placeholder="Ej: 65365-3", label_visibility="collapsed")
+            if st.button("✅ Confirmar", use_container_width=True, type="primary", key=f"_cam_ok_{st.session_state.ord_n}"):
+                if cod_manual.strip():
+                    procesar_orden(cod_manual.strip())
+                    st.session_state.ord_n += 1
+                    st.rerun()
+                else:
+                    st.warning("Ingresá el código.")
 
         if st.button("⌨️ Volver al escáner / teclado", key="btn_volver_scan"):
             st.session_state.modo_camara = False
