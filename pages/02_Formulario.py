@@ -526,24 +526,34 @@ elif paso == 2:
                 st.rerun()
     else:
         # ── MODO CÁMARA ───────────────────────────────────────────────────────
-        st.caption("📸 Apuntá la cámara al código de barras.")
-        codigo_auto = qrcode_scanner(key=f"_cam_{st.session_state.ord_n}")
-        if codigo_auto:
-            st.success(f"✅ Código detectado: **{codigo_auto}**")
-            procesar_orden(codigo_auto)
-            st.session_state.ord_n += 1
-            st.rerun()
-        else:
-            st.markdown('<div style="font-size:13px;color:#f0c040;margin-bottom:6px;">👀 Ingresá el número de la etiqueta:</div>', unsafe_allow_html=True)
-            cod_manual = st.text_input("Código", key=f"_cam_manual_{st.session_state.ord_n}",
-                                       placeholder="Ej: 65365-3", label_visibility="collapsed")
-            if st.button("✅ Confirmar", use_container_width=True, type="primary", key=f"_cam_ok_{st.session_state.ord_n}"):
-                if cod_manual.strip():
-                    procesar_orden(cod_manual.strip())
+        st.caption("📸 Enfocá la etiqueta con la cámara trasera y capturá.")
+        raw_foto = qrcode_scanner(key=f"_cam_{st.session_state.ord_n}")
+        if raw_foto and raw_foto.startswith("data:image"):
+            import base64 as _b64
+            from io import BytesIO as _BytesIO
+            _, b64data = raw_foto.split(",", 1)
+            img_bytes = _BytesIO(_b64.b64decode(b64data))
+            codigo_auto = decodificar_imagen(img_bytes)
+            if codigo_auto:
+                st.success(f"✅ Código detectado: **{codigo_auto}**")
+                procesar_orden(codigo_auto)
+                st.session_state.ord_n += 1
+                st.rerun()
+            else:
+                st.warning("No se pudo leer el código. Intentá enfocar mejor y capturar de nuevo.")
+                if st.button("🔄 Reintentar", key=f"_cam_retry_{st.session_state.ord_n}"):
                     st.session_state.ord_n += 1
                     st.rerun()
-                else:
-                    st.warning("Ingresá el código.")
+        st.markdown('<div style="font-size:13px;color:#f0c040;margin-bottom:6px;">👀 O ingresá el número de la etiqueta:</div>', unsafe_allow_html=True)
+        cod_manual = st.text_input("Código", key=f"_cam_manual_{st.session_state.ord_n}",
+                                   placeholder="Ej: 65365-3", label_visibility="collapsed")
+        if st.button("✅ Confirmar", use_container_width=True, type="primary", key=f"_cam_ok_{st.session_state.ord_n}"):
+            if cod_manual.strip():
+                procesar_orden(cod_manual.strip())
+                st.session_state.ord_n += 1
+                st.rerun()
+            else:
+                st.warning("Ingresá el código.")
 
         if st.button("⌨️ Volver al escáner / teclado", key="btn_volver_scan"):
             st.session_state.modo_camara = False
