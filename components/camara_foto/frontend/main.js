@@ -73,6 +73,14 @@ function onRender(event) {
             btn.disabled = true;
             btn.style.background = '#555';
             sendValue(dataUrl);
+            // Re-habilitar automaticamente si Python no hizo rerun (decode fallido)
+            setTimeout(function() {
+                if (btn.disabled) {
+                    btn.disabled = false;
+                    btn.style.background = '#1976d2';
+                    status.innerText = 'Intentalo de nuevo, enfoca mejor la etiqueta.';
+                }
+            }, 2500);
         });
 
         window.rendered = true;

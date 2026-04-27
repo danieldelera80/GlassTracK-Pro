@@ -540,10 +540,7 @@ elif paso == 2:
                 st.session_state.ord_n += 1
                 st.rerun()
             else:
-                st.warning("No se pudo leer el código. Intentá enfocar mejor y capturar de nuevo.")
-                if st.button("🔄 Reintentar", key=f"_cam_retry_{st.session_state.ord_n}"):
-                    st.session_state.ord_n += 1
-                    st.rerun()
+                st.warning("No se pudo leer el código. La cámara se reactivó, intentá de nuevo.")
         st.markdown('<div style="font-size:13px;color:#f0c040;margin-bottom:6px;">👀 O ingresá el número de la etiqueta:</div>', unsafe_allow_html=True)
         cod_manual = st.text_input("Código", key=f"_cam_manual_{st.session_state.ord_n}",
                                    placeholder="Ej: 65365-3", label_visibility="collapsed")
