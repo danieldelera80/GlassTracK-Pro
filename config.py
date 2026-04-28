@@ -185,6 +185,88 @@ def obtener_dvh_info_bulk(ordenes: list) -> dict:
         return {}
 
 
+
+def obtener_pares_dvh_bulk(ordenes_maestras: list[str]) -> dict:
+    """
+    Batch query para obtener info de pares DVH de múltiples órdenes maestras.
+    Retorna {orden_maestra: {"cara1": {...}, "cara2": {...}, "ambas_en_dvh": bool, "ambas_marcadas": bool}}
+    """
+    conn = get_connection()
+    resultado = {}
+    if not ordenes_maestras:
+        return resultado
+        
+    try:
+        limpias = [str(o).strip() for o in ordenes_maestras if o]
+        if not limpias:
+            return resultado
+            
+        with conn.session as s:
+            result = s.execute(text("""
+                WITH marcadas AS (
+                    SELECT orden_maestra, cara, orden_pieza
+                    FROM ordenes_dvh
+                    WHERE orden_maestra = ANY(:maestras)
+                ),
+                sectores AS (
+                    SELECT DISTINCT ON (TRIM(r.orden))
+                        TRIM(r.orden) as orden_pieza,
+                        r.sector
+                    FROM registros r
+                    WHERE TRIM(r.orden) IN (SELECT orden_pieza FROM marcadas)
+                    ORDER BY TRIM(r.orden), r.fecha_hora DESC
+                )
+                SELECT
+                    m.orden_maestra,
+                    m.cara,
+                    m.orden_pieza,
+                    s.sector
+                FROM marcadas m
+                LEFT JOIN sectores s ON m.orden_pieza = s.orden_pieza
+            """), {"maestras": limpias})
+            rows = result.fetchall()
+            
+        # Inicializar diccionario base para todas las maestras solicitadas
+        for om in limpias:
+            resultado[om] = {"cara1": None, "cara2": None, "ambas_en_dvh": False, "ambas_marcadas": False}
+            
+        piezas_marcadas = {} # maestra -> [caras]
+        
+        for r in rows:
+            om = str(r[0])
+            cara = int(r[1])
+            op = str(r[2])
+            sector = str(r[3]) if r[3] else "Desconocido"
+            
+            if om not in piezas_marcadas:
+                piezas_marcadas[om] = set()
+            piezas_marcadas[om].add(cara)
+            
+            resultado[om][f"cara{cara}"] = {
+                "orden_pieza": op,
+                "sector_actual": sector,
+                "esta_en_dvh": (sector == "En Proceso en DVH")
+            }
+            
+        for om in limpias:
+            marcas = piezas_marcadas.get(om, set())
+            resultado[om]["ambas_marcadas"] = (1 in marcas and 2 in marcas)
+            
+            # Ambas en DVH?
+            ambas = True
+            for c in [1, 2]:
+                cara_info = resultado[om].get(f"cara{c}")
+                if cara_info is None or not cara_info["esta_en_dvh"]:
+                    ambas = False
+                    break
+            resultado[om]["ambas_en_dvh"] = ambas
+
+    except Exception as e:
+        print(f"Error obtener_pares_dvh_bulk: {e}")
+        
+    return resultado
+
+
 def obtener_par_dvh(orden_maestra: str) -> dict:
     conn = get_connection()
     resultado = {"cara1": None, "cara2": None, "ambas_en_dvh": False, "ambas_marcadas": False}
