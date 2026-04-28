@@ -164,6 +164,27 @@ def obtener_dvh_info(orden_pieza: str) -> dict | None:
         return None
 
 
+def obtener_dvh_info_bulk(ordenes: list) -> dict:
+    """Una sola query para obtener DVH info de una lista de órdenes.
+    Retorna {orden_pieza: {"cara": int, "maestra": str}}."""
+    if not ordenes:
+        return {}
+    conn = get_connection()
+    try:
+        limpias = [str(o).strip() for o in ordenes if o]
+        if not limpias:
+            return {}
+        with conn.session as s:
+            result = s.execute(
+                text("SELECT orden_pieza, cara, orden_maestra FROM ordenes_dvh WHERE orden_pieza = ANY(:ops)"),
+                {"ops": limpias}
+            )
+            rows = result.fetchall()
+        return {str(r[0]): {"cara": int(r[1]), "maestra": str(r[2])} for r in rows}
+    except Exception:
+        return {}
+
+
 def obtener_par_dvh(orden_maestra: str) -> dict:
     conn = get_connection()
     resultado = {"cara1": None, "cara2": None, "ambas_en_dvh": False, "ambas_marcadas": False}

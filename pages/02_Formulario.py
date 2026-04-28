@@ -8,7 +8,8 @@ from pathlib import Path
 
 from config import (SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia,
                     get_connection, verificar_estado_sistema,
-                    marcar_dvh, desmarcar_dvh, obtener_dvh_info, obtener_par_dvh)
+                    marcar_dvh, desmarcar_dvh, obtener_dvh_info, obtener_par_dvh,
+                    obtener_dvh_info_bulk)
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
 from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra, render_grupo_maestro_header
 from components.camara_foto import capturar_foto as qrcode_scanner
@@ -650,6 +651,7 @@ elif paso == 2:
                 _grupos_ent  = agrupar_por_orden_maestra(_entrantes_fil)
                 _glist_e     = list(_grupos_ent.items())
                 _visible_e   = _glist_e[:_lim_e]
+                _dvh_bulk_e  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_e for r in piezas])
                 for _maestro_e, _piezas_e in _visible_e:
                     # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
@@ -683,7 +685,7 @@ elif paso == 2:
                         render_grupo_maestro_header(_maestro_e, len(_piezas_e), _carro_g, estado="pendiente")
                         with st.expander("ver piezas", expanded=False):
                             for row in _piezas_e:
-                                _di_e = obtener_dvh_info(row['orden'])
+                                _di_e = _dvh_bulk_e.get(row['orden'])
                                 if render_tarjeta_orden(
                                     row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
                                     estado="pendiente", dentro_de_grupo=True,
@@ -708,7 +710,7 @@ elif paso == 2:
                                         st.error(err)
                     else:
                         row = _piezas_e[0]
-                        _di_e = obtener_dvh_info(row['orden'])
+                        _di_e = _dvh_bulk_e.get(row['orden'])
                         if render_tarjeta_orden(
                             row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
                             estado="pendiente", dvh_cara=_di_e["cara"] if _di_e else None
@@ -759,6 +761,7 @@ elif paso == 2:
                 _grupos_proc = agrupar_por_orden_maestra(_en_proceso_fil)
                 _glist_p     = list(_grupos_proc.items())
                 _visible_p   = _glist_p[:_lim_p]
+                _dvh_bulk_p  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_p for r in piezas])
                 for _maestro_p, _piezas_p in _visible_p:
                     # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
@@ -792,7 +795,7 @@ elif paso == 2:
                         render_grupo_maestro_header(_maestro_p, len(_piezas_p), _carro_g, estado="en_proceso")
                         with st.expander("ver piezas", expanded=False):
                             for row in _piezas_p:
-                                _di_p = obtener_dvh_info(row['orden'])
+                                _di_p = _dvh_bulk_p.get(row['orden'])
                                 _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                                 if render_tarjeta_orden(
                                     row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
@@ -807,7 +810,7 @@ elif paso == 2:
                                     st.rerun()
                     else:
                         row = _piezas_p[0]
-                        _di_p = obtener_dvh_info(row['orden'])
+                        _di_p = _dvh_bulk_p.get(row['orden'])
                         _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                         if render_tarjeta_orden(
                             row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
@@ -848,13 +851,14 @@ elif paso == 2:
                 _grupos_pend = agrupar_por_orden_maestra(_pendientes_fil)
                 _glist_d     = list(_grupos_pend.items())
                 _visible_d   = _glist_d[:_lim_d]
+                _dvh_bulk_d  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_d for r in piezas])
                 for _maestro_d, _piezas_d in _visible_d:
                     if len(_piezas_d) > 1:
                         _carro_g = _piezas_d[0].get('carro', '')
                         render_grupo_maestro_header(_maestro_d, len(_piezas_d), _carro_g, estado="terminado")
                         with st.expander("ver piezas", expanded=False):
                             for row in _piezas_d:
-                                _di_d = obtener_dvh_info(row['orden'])
+                                _di_d = _dvh_bulk_d.get(row['orden'])
                                 _meta_ent = f"&#x1F6D2; {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                                 if render_tarjeta_orden(
                                     row, "🚀 ENTREGAR", f"ent_{row['orden']}",
@@ -868,7 +872,7 @@ elif paso == 2:
                                     st.rerun()
                     else:
                         row = _piezas_d[0]
-                        _di_d = obtener_dvh_info(row['orden'])
+                        _di_d = _dvh_bulk_d.get(row['orden'])
                         _meta_ent = f"&#x1F6D2; {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                         if render_tarjeta_orden(
                             row, "🚀 ENTREGAR", f"ent_{row['orden']}",
