@@ -9,7 +9,7 @@ from pathlib import Path
 from config import (SECTORES, SECTORES_ESCANEO_DIRECTO, verificar_licencia,
                     get_connection, verificar_estado_sistema,
                     marcar_dvh, desmarcar_dvh, obtener_dvh_info, obtener_par_dvh,
-                    obtener_dvh_info_bulk)
+                    obtener_dvh_info_bulk, obtener_pares_dvh_bulk)
 from styles import CSS_GLOBAL, render_sb_header, render_sb_operario, render_steps
 from components.tarjeta_orden import render_tarjeta_orden, inyectar_css_tarjetas, agrupar_por_orden_maestra, render_grupo_maestro_header
 from components.camara_foto import capturar_foto as qrcode_scanner
@@ -652,10 +652,16 @@ elif paso == 2:
                 _glist_e     = list(_grupos_ent.items())
                 _visible_e   = _glist_e[:_lim_e]
                 _dvh_bulk_e  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_e for r in piezas])
+                # Batch query para pares DVH (solo si estamos en sector DVH)
+                if st.session_state.sector_confirmado == "DVH":
+                    _maestras_e = [m for m, _ in _visible_e]
+                    _pares_e = obtener_pares_dvh_bulk(_maestras_e)
+                else:
+                    _pares_e = {}
                 for _maestro_e, _piezas_e in _visible_e:
                     # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
-                        _par_e = obtener_par_dvh(_maestro_e)
+                        _par_e = _pares_e.get(_maestro_e, {"ambas_marcadas": False, "cara1": None, "cara2": None, "ambas_en_dvh": False})
                         if _par_e["ambas_marcadas"]:
                             _ambas_e = _par_e["ambas_en_dvh"]
                             _estado_badge_e = "&#x2705; Pareja lista" if _ambas_e else "&#x23F3; Esperando Cara"
@@ -762,10 +768,16 @@ elif paso == 2:
                 _glist_p     = list(_grupos_proc.items())
                 _visible_p   = _glist_p[:_lim_p]
                 _dvh_bulk_p  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_p for r in piezas])
+                # Batch query para pares DVH (solo si estamos en sector DVH)
+                if st.session_state.sector_confirmado == "DVH":
+                    _maestras_p = [m for m, _ in _visible_p]
+                    _pares_p = obtener_pares_dvh_bulk(_maestras_p)
+                else:
+                    _pares_p = {}
                 for _maestro_p, _piezas_p in _visible_p:
                     # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
-                        _par_p = obtener_par_dvh(_maestro_p)
+                        _par_p = _pares_p.get(_maestro_p, {"ambas_marcadas": False, "cara1": None, "cara2": None, "ambas_en_dvh": False})
                         if _par_p["ambas_marcadas"]:
                             _ambas_p = _par_p["ambas_en_dvh"]
                             _estado_badge_p = "&#x2705; Pareja lista" if _ambas_p else "&#x23F3; Esperando Cara"
