@@ -285,6 +285,7 @@ _DEFAULTS = {
     "lado_previo":       "A",
     "paso3_fresh":       False,
     "historial":         [],   # últimos 3 escaneos de la sesión
+    "batch_desp_show":   False,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -652,14 +653,47 @@ elif paso == 2:
                 _glist_e     = list(_grupos_ent.items())
                 _visible_e   = _glist_e[:_lim_e]
                 _dvh_bulk_e  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_e for r in piezas])
-                # Batch query para pares DVH (solo si estamos en sector DVH)
                 if st.session_state.sector_confirmado == "DVH":
                     _maestras_e = [m for m, _ in _visible_e]
                     _pares_e = obtener_pares_dvh_bulk(_maestras_e)
                 else:
                     _pares_e = {}
+
+                # ── Selección múltiple ─────────────────────────────────────────
+                _sel_pend = {_m: _pzs for _m, _pzs in _visible_e if st.session_state.get(f"chk_pend_{_m}", False)}
+                _n_sel_pend = len(_sel_pend)
+                if _n_sel_pend > 0:
+                    st.info(f"☑️ {_n_sel_pend} seleccionada{'s' if _n_sel_pend != 1 else ''}")
+                if _n_sel_pend >= 2:
+                    if st.button(f"↘️ TOMAR SELECCIONADAS ({_n_sel_pend})", type="primary",
+                                 use_container_width=True, key="btn_batch_tomar"):
+                        _tomadas_b, _errores_tb = 0, []
+                        for _bm, _bpzs in _sel_pend.items():
+                            for _brow in _bpzs:
+                                _bok, _berr = guardar_registro(
+                                    _brow['orden'], _brow.get('carro', 0), _brow.get('lado', '-'),
+                                    st.session_state.op_confirmado,
+                                    f"En Proceso en {st.session_state.sector_confirmado}"
+                                )
+                                if _bok:
+                                    agregar_historial(_brow['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                    _tomadas_b += 1
+                                else:
+                                    _errores_tb.append(_brow['orden'])
+                        for _bm in list(_sel_pend.keys()):
+                            st.session_state[f"chk_pend_{_bm}"] = False
+                        st.session_state.ord_n += 1
+                        if _tomadas_b > 0:
+                            st.session_state.ultimo = {
+                                "orden": f"{_tomadas_b} órdenes",
+                                "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                "op": st.session_state.op_confirmado, "offline": False
+                            }
+                        if _errores_tb:
+                            st.session_state.reg_error = f"Errores en: {', '.join(_errores_tb[:5])}"
+                        st.rerun()
+
                 for _maestro_e, _piezas_e in _visible_e:
-                    # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
                         _par_e = _pares_e.get(_maestro_e, {"ambas_marcadas": False, "cara1": None, "cara2": None, "ambas_en_dvh": False})
                         if _par_e["ambas_marcadas"]:
@@ -686,58 +720,62 @@ elif paso == 2:
                                 f'&#x26A0;&#xFE0F; {_maestro_e} — Falta marcar Cara {_falta_n_e} en sectores anteriores</div>',
                                 unsafe_allow_html=True
                             )
-                    if len(_piezas_e) > 1:
-                        _carro_g = _piezas_e[0].get('carro', '')
-                        render_grupo_maestro_header(_maestro_e, len(_piezas_e), _carro_g, estado="pendiente")
-                        with st.expander("ver piezas", expanded=False):
-                            for row in _piezas_e:
-                                _di_e = _dvh_bulk_e.get(row['orden'])
-                                if render_tarjeta_orden(
-                                    row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
-                                    estado="pendiente", dentro_de_grupo=True,
-                                    dvh_cara=_di_e["cara"] if _di_e else None
-                                ):
-                                    ok, err = guardar_registro(
-                                        row['orden'], row.get('carro', 0), row.get('lado', '-'),
-                                        st.session_state.op_confirmado,
-                                        f"En Proceso en {st.session_state.sector_confirmado}"
-                                    )
-                                    if ok:
-                                        agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                                        st.session_state.ultimo = {
-                                            "orden": row['orden'],
-                                            "sector": f"En Proceso en {st.session_state.sector_confirmado}",
-                                            "op": st.session_state.op_confirmado,
-                                            "offline": err == "OFFLINE"
-                                        }
-                                        st.session_state.ord_n += 1
-                                        st.rerun()
-                                    else:
-                                        st.error(err)
-                    else:
-                        row = _piezas_e[0]
-                        _di_e = _dvh_bulk_e.get(row['orden'])
-                        if render_tarjeta_orden(
-                            row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
-                            estado="pendiente", dvh_cara=_di_e["cara"] if _di_e else None
-                        ):
-                            ok, err = guardar_registro(
-                                row['orden'], row.get('carro', 0), row.get('lado', '-'),
-                                st.session_state.op_confirmado,
-                                f"En Proceso en {st.session_state.sector_confirmado}"
-                            )
-                            if ok:
-                                agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                                st.session_state.ultimo = {
-                                    "orden": row['orden'],
-                                    "sector": f"En Proceso en {st.session_state.sector_confirmado}",
-                                    "op": st.session_state.op_confirmado,
-                                    "offline": err == "OFFLINE"
-                                }
-                                st.session_state.ord_n += 1
-                                st.rerun()
-                            else:
-                                st.error(err)
+                    _col_chk_e, _col_card_e = st.columns([0.06, 0.94])
+                    with _col_chk_e:
+                        st.checkbox("", key=f"chk_pend_{_maestro_e}", label_visibility="collapsed")
+                    with _col_card_e:
+                        if len(_piezas_e) > 1:
+                            _carro_g = _piezas_e[0].get('carro', '')
+                            render_grupo_maestro_header(_maestro_e, len(_piezas_e), _carro_g, estado="pendiente")
+                            with st.expander("ver piezas", expanded=False):
+                                for row in _piezas_e:
+                                    _di_e = _dvh_bulk_e.get(row['orden'])
+                                    if render_tarjeta_orden(
+                                        row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                                        estado="pendiente", dentro_de_grupo=True,
+                                        dvh_cara=_di_e["cara"] if _di_e else None
+                                    ):
+                                        ok, err = guardar_registro(
+                                            row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                            st.session_state.op_confirmado,
+                                            f"En Proceso en {st.session_state.sector_confirmado}"
+                                        )
+                                        if ok:
+                                            agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                            st.session_state.ultimo = {
+                                                "orden": row['orden'],
+                                                "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                                "op": st.session_state.op_confirmado,
+                                                "offline": err == "OFFLINE"
+                                            }
+                                            st.session_state.ord_n += 1
+                                            st.rerun()
+                                        else:
+                                            st.error(err)
+                        else:
+                            row = _piezas_e[0]
+                            _di_e = _dvh_bulk_e.get(row['orden'])
+                            if render_tarjeta_orden(
+                                row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                                estado="pendiente", dvh_cara=_di_e["cara"] if _di_e else None
+                            ):
+                                ok, err = guardar_registro(
+                                    row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                    st.session_state.op_confirmado,
+                                    f"En Proceso en {st.session_state.sector_confirmado}"
+                                )
+                                if ok:
+                                    agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                    st.session_state.ultimo = {
+                                        "orden": row['orden'],
+                                        "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                        "op": st.session_state.op_confirmado,
+                                        "offline": err == "OFFLINE"
+                                    }
+                                    st.session_state.ord_n += 1
+                                    st.rerun()
+                                else:
+                                    st.error(err)
                 _resto_e = len(_glist_e) - _lim_e
                 if _resto_e > 0:
                     if st.button(f"Mostrar más ({_resto_e} restantes)", key=f"mas_ent_{_sk}"):
@@ -768,14 +806,130 @@ elif paso == 2:
                 _glist_p     = list(_grupos_proc.items())
                 _visible_p   = _glist_p[:_lim_p]
                 _dvh_bulk_p  = obtener_dvh_info_bulk([r['orden'] for _, piezas in _visible_p for r in piezas])
-                # Batch query para pares DVH (solo si estamos en sector DVH)
                 if st.session_state.sector_confirmado == "DVH":
                     _maestras_p = [m for m, _ in _visible_p]
                     _pares_p = obtener_pares_dvh_bulk(_maestras_p)
                 else:
                     _pares_p = {}
+
+                # ── Selección múltiple ─────────────────────────────────────────
+                _sel_proc = {_m: _pzs for _m, _pzs in _visible_p if st.session_state.get(f"chk_proc_{_m}", False)}
+                _n_sel_proc = len(_sel_proc)
+                if _n_sel_proc > 0:
+                    st.info(f"☑️ {_n_sel_proc} seleccionada{'s' if _n_sel_proc != 1 else ''}")
+
+                _batch_desp_show = st.session_state.get("batch_desp_show", False)
+
+                if _n_sel_proc >= 2:
+                    _btn_lbl_desp = "📤 DESPACHAR SELECCIONADAS ▲" if _batch_desp_show else f"📤 DESPACHAR SELECCIONADAS ({_n_sel_proc})"
+                    if st.button(_btn_lbl_desp, type="primary", use_container_width=True, key="btn_batch_desp"):
+                        st.session_state.batch_desp_show = not _batch_desp_show
+                        st.rerun()
+
+                # ── Formulario batch despachar ─────────────────────────────────
+                if _batch_desp_show and _n_sel_proc >= 2:
+                    st.markdown("---")
+                    st.markdown(f"**📤 Despachar {_n_sel_proc} órdenes seleccionadas**")
+                    _LADOS_B = ["A", "B", "Ambos"]
+                    _es_dvh_b = (st.session_state.sector_confirmado == "DVH")
+                    _es_opt_b = (st.session_state.sector_confirmado == "Optimización")
+
+                    _es_error_b = False
+                    if _es_opt_b:
+                        _es_error_b = st.checkbox("Es orden de error (aplica a todas)", value=False, key="_bd_es_error")
+
+                    _col_bc, _col_bl = st.columns(2)
+                    with _col_bc:
+                        st.markdown("**🛒 Carro**")
+                        _b_carro_str = st.text_input("Carro", key="_bd_carro", placeholder="Número...", label_visibility="collapsed")
+                        _b_carro_ok = bool(_b_carro_str.strip()) and _b_carro_str.strip().isdigit() and int(_b_carro_str.strip()) >= 1
+                        if _b_carro_str.strip() and not _b_carro_ok:
+                            st.caption("⚠️ Número inválido")
+                    with _col_bl:
+                        st.markdown("**↔️ Lado**")
+                        _b_lado = st.selectbox("Lado", _LADOS_B, key="_bd_lado", label_visibility="collapsed")
+
+                    if not _es_dvh_b:
+                        _destinos_b = [s for s in SECTORES if s != st.session_state.sector_confirmado and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]] + [SECTOR_TERMINADO, "Dañado"]
+                        if _es_opt_b:
+                            _destinos_b = [s for s in SECTORES if s != "Optimización" and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]] + [SECTOR_TERMINADO]
+                        _b_destino = st.selectbox("📍 Enviar a:", _destinos_b, key="_bd_destino")
+                    else:
+                        _b_destino = "Terminado"
+
+                    st.write("")
+                    _col_cancel_b, _col_conf_b = st.columns(2)
+                    with _col_cancel_b:
+                        if st.button("✕ Cancelar", use_container_width=True, key="btn_cancel_batch_desp"):
+                            st.session_state.batch_desp_show = False
+                            st.rerun()
+                    with _col_conf_b:
+                        _btn_lbl_conf = "🪟 CONSOLIDAR TODAS" if _es_dvh_b else "📤 CONFIRMAR DESPACHO"
+                        if st.button(_btn_lbl_conf, type="primary", use_container_width=True, key="btn_confirm_batch_desp"):
+                            if not _es_dvh_b and not _b_carro_ok and not _es_error_b:
+                                st.warning("⚠️ Ingresá el número de carro.")
+                            else:
+                                _b_carro_val = int(_b_carro_str.strip()) if _b_carro_ok else 0
+                                _despachadas_b, _errores_db = 0, []
+                                if _es_dvh_b:
+                                    for _bm_dvh in list(_sel_proc.keys()):
+                                        _par_b = _pares_p.get(_bm_dvh, {})
+                                        if _par_b.get("ambas_en_dvh", False):
+                                            _c1_b = _par_b["cara1"]
+                                            _c2_b = _par_b["cara2"]
+                                            try:
+                                                _ts_b = _now_utc()
+                                                _op_b = st.session_state.op_confirmado
+                                                with conn.session as _sb:
+                                                    for _cp_b in [_c1_b, _c2_b]:
+                                                        _sb.execute(text("""
+                                                            INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
+                                                            VALUES (:f, :o, :c, :l, :u, 'Consolidada en DVH')
+                                                        """), {"f": _ts_b, "o": _cp_b["orden_pieza"],
+                                                               "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                                                    _sb.execute(text("""
+                                                        INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
+                                                        VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
+                                                    """), {"f": _ts_b, "o": _bm_dvh, "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                                                    _sb.commit()
+                                                agregar_historial(_bm_dvh, "DVH", enviado_a="Terminado (DVH)")
+                                                _despachadas_b += 1
+                                            except Exception as _exc_dvh:
+                                                _errores_db.append(_bm_dvh)
+                                        else:
+                                            _errores_db.append(_bm_dvh)
+                                else:
+                                    for _bm_n, _bpzs_n in _sel_proc.items():
+                                        for _brow_n in _bpzs_n:
+                                            if _b_destino == "Dañado":
+                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, "Dañado")
+                                            elif _b_destino == SECTOR_TERMINADO:
+                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, SECTOR_TERMINADO)
+                                            else:
+                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"Enviado a {_b_destino}")
+                                            if _bok_n:
+                                                agregar_historial(_brow_n['orden'], st.session_state.sector_confirmado, enviado_a=_b_destino)
+                                                _despachadas_b += 1
+                                            else:
+                                                _errores_db.append(_brow_n['orden'])
+                                for _bm_c in list(_sel_proc.keys()):
+                                    st.session_state[f"chk_proc_{_bm_c}"] = False
+                                st.session_state.batch_desp_show = False
+                                st.session_state.ord_n += 1
+                                if _despachadas_b > 0:
+                                    _dest_lbl = "Terminado (DVH)" if _es_dvh_b else _b_destino
+                                    st.session_state.ultimo = {
+                                        "orden": f"{_despachadas_b} órdenes",
+                                        "sector": st.session_state.sector_confirmado,
+                                        "op": st.session_state.op_confirmado,
+                                        "enviado_a": _dest_lbl, "offline": False
+                                    }
+                                if _errores_db:
+                                    st.session_state.reg_error = f"Errores en: {', '.join(_errores_db[:5])}"
+                                st.rerun()
+                    st.markdown("---")
+
                 for _maestro_p, _piezas_p in _visible_p:
-                    # Vista de pares DVH (solo sector DVH)
                     if st.session_state.sector_confirmado == "DVH":
                         _par_p = _pares_p.get(_maestro_p, {"ambas_marcadas": False, "cara1": None, "cara2": None, "ambas_en_dvh": False})
                         if _par_p["ambas_marcadas"]:
@@ -802,39 +956,47 @@ elif paso == 2:
                                 f'&#x26A0;&#xFE0F; {_maestro_p} — Falta marcar Cara {_falta_n_p} en sectores anteriores</div>',
                                 unsafe_allow_html=True
                             )
-                    if len(_piezas_p) > 1:
-                        _carro_g = _piezas_p[0].get('carro', '')
-                        render_grupo_maestro_header(_maestro_p, len(_piezas_p), _carro_g, estado="en_proceso")
-                        with st.expander("ver piezas", expanded=False):
-                            for row in _piezas_p:
-                                _di_p = _dvh_bulk_p.get(row['orden'])
-                                _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
-                                if render_tarjeta_orden(
-                                    row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                                    estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
-                                    dvh_cara=_di_p["cara"] if _di_p else None
-                                ):
-                                    st.session_state.orden_val    = row['orden']
-                                    st.session_state.carro_previo = int(row.get('carro') or 0)
-                                    st.session_state.lado_previo  = str(row.get('lado') or 'A')
-                                    st.session_state.paso3_fresh  = True
-                                    st.session_state.paso         = 4
-                                    st.rerun()
-                    else:
-                        row = _piezas_p[0]
-                        _di_p = _dvh_bulk_p.get(row['orden'])
-                        _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
-                        if render_tarjeta_orden(
-                            row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                            estado="en_proceso", meta_texto=_meta_proc,
-                            dvh_cara=_di_p["cara"] if _di_p else None
-                        ):
-                            st.session_state.orden_val    = row['orden']
-                            st.session_state.carro_previo = int(row.get('carro') or 0)
-                            st.session_state.lado_previo  = str(row.get('lado') or 'A')
-                            st.session_state.paso3_fresh  = True
-                            st.session_state.paso         = 4
-                            st.rerun()
+                    _chk_disabled_p = False
+                    if st.session_state.sector_confirmado == "DVH":
+                        _par_for_chk = _pares_p.get(_maestro_p, {"ambas_en_dvh": False})
+                        _chk_disabled_p = not _par_for_chk.get("ambas_en_dvh", False)
+                    _col_chk_p, _col_card_p = st.columns([0.06, 0.94])
+                    with _col_chk_p:
+                        st.checkbox("", key=f"chk_proc_{_maestro_p}", disabled=_chk_disabled_p, label_visibility="collapsed")
+                    with _col_card_p:
+                        if len(_piezas_p) > 1:
+                            _carro_g = _piezas_p[0].get('carro', '')
+                            render_grupo_maestro_header(_maestro_p, len(_piezas_p), _carro_g, estado="en_proceso")
+                            with st.expander("ver piezas", expanded=False):
+                                for row in _piezas_p:
+                                    _di_p = _dvh_bulk_p.get(row['orden'])
+                                    _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
+                                    if render_tarjeta_orden(
+                                        row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                        estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
+                                        dvh_cara=_di_p["cara"] if _di_p else None
+                                    ):
+                                        st.session_state.orden_val    = row['orden']
+                                        st.session_state.carro_previo = int(row.get('carro') or 0)
+                                        st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                                        st.session_state.paso3_fresh  = True
+                                        st.session_state.paso         = 4
+                                        st.rerun()
+                        else:
+                            row = _piezas_p[0]
+                            _di_p = _dvh_bulk_p.get(row['orden'])
+                            _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
+                            if render_tarjeta_orden(
+                                row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                estado="en_proceso", meta_texto=_meta_proc,
+                                dvh_cara=_di_p["cara"] if _di_p else None
+                            ):
+                                st.session_state.orden_val    = row['orden']
+                                st.session_state.carro_previo = int(row.get('carro') or 0)
+                                st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                                st.session_state.paso3_fresh  = True
+                                st.session_state.paso         = 4
+                                st.rerun()
                 _resto_p = len(_glist_p) - _lim_p
                 if _resto_p > 0:
                     if st.button(f"Mostrar más ({_resto_p} restantes)", key=f"mas_proc_{_sk}"):
