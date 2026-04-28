@@ -151,6 +151,7 @@ def render_tarjeta_orden(
     estado: str = "pendiente",
     meta_texto: str | None = None,
     dentro_de_grupo: bool = False,
+    dvh_cara: int | None = None,
 ) -> bool:
     """
     Renderiza la tarjeta de una orden + botón de acción.
@@ -190,6 +191,10 @@ def render_tarjeta_orden(
         badges += '<span class="badge-urgente">URGENTE</span>'
     if es_incidencia:
         badges += '<span class="badge-incidencia">INCIDENCIA</span>'
+    if dvh_cara is not None:
+        badges += (f'<span style="background:#0ea5e9;color:#fff;font-size:11px;'
+                   f'padding:1px 6px;border-radius:4px;font-weight:bold;'
+                   f'margin-left:6px;">&#x1FA9F; DVH Cara {dvh_cara}</span>')
 
     if meta_texto is None:
         carro      = orden.get("carro", "")

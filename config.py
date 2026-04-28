@@ -1,10 +1,14 @@
 """
 config.py — Configuración compartida entre todas las páginas con conexión a NEON.
 """
+import re
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy import text  # Necesario para Neon
+
+_MAESTRO_RE_CFG = re.compile(r'^(.*?)[-\s](\d+)$')
+_PFX_STRIP_CFG  = re.compile(r'^\s*\[(URGENTE|INCIDENCIA)\]\s*', re.IGNORECASE)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  🔒 CONTROL DE LICENCIA
@@ -96,7 +100,109 @@ def init_db() -> None:
                 motivo           TEXT
             );
         """))
+        s.execute(text("""
+            CREATE TABLE IF NOT EXISTS ordenes_dvh (
+                id            SERIAL PRIMARY KEY,
+                orden_pieza   TEXT      NOT NULL UNIQUE,
+                orden_maestra TEXT      NOT NULL,
+                cara          INTEGER   NOT NULL CHECK (cara IN (1, 2)),
+                marcado_por   TEXT      NOT NULL,
+                operario      TEXT      NOT NULL,
+                fecha_marca   TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+        """))
+        s.execute(text("CREATE INDEX IF NOT EXISTS idx_dvh_maestra ON ordenes_dvh(orden_maestra);"))
         s.commit()
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  HELPERS DVH
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _extraer_maestra_dvh(orden_pieza: str) -> str:
+    """Extrae el prefijo maestro de una orden-pieza usando el mismo regex que tarjeta_orden.py."""
+    base = _PFX_STRIP_CFG.sub("", orden_pieza).strip()
+    m = _MAESTRO_RE_CFG.match(base)
+    return m.group(1).strip() if m else base
+
+
+def marcar_dvh(orden_pieza: str, cara: int, operario: str, sector_origen: str) -> None:
+    conn = get_connection()
+    maestra = _extraer_maestra_dvh(orden_pieza)
+    with conn.session as s:
+        s.execute(text("""
+            INSERT INTO ordenes_dvh (orden_pieza, orden_maestra, cara, marcado_por, operario, fecha_marca)
+            VALUES (:op, :om, :cara, :mp, :oper, NOW())
+            ON CONFLICT (orden_pieza) DO UPDATE
+              SET cara        = EXCLUDED.cara,
+                  marcado_por = EXCLUDED.marcado_por,
+                  operario    = EXCLUDED.operario,
+                  fecha_marca = EXCLUDED.fecha_marca
+        """), {"op": orden_pieza.strip(), "om": maestra, "cara": cara,
+               "mp": sector_origen, "oper": operario.strip()})
+        s.commit()
+
+
+def desmarcar_dvh(orden_pieza: str) -> None:
+    conn = get_connection()
+    with conn.session as s:
+        s.execute(text("DELETE FROM ordenes_dvh WHERE orden_pieza = :op"),
+                  {"op": orden_pieza.strip()})
+        s.commit()
+
+
+def obtener_dvh_info(orden_pieza: str) -> dict | None:
+    conn = get_connection()
+    try:
+        df = conn.query(
+            "SELECT cara, orden_maestra FROM ordenes_dvh WHERE orden_pieza = :op",
+            params={"op": orden_pieza.strip()}, ttl=0
+        )
+        if df.empty:
+            return None
+        return {"cara": int(df.iloc[0]["cara"]), "maestra": str(df.iloc[0]["orden_maestra"])}
+    except Exception:
+        return None
+
+
+def obtener_par_dvh(orden_maestra: str) -> dict:
+    conn = get_connection()
+    resultado = {"cara1": None, "cara2": None, "ambas_en_dvh": False, "ambas_marcadas": False}
+    try:
+        df_piezas = conn.query(
+            "SELECT orden_pieza, cara FROM ordenes_dvh WHERE orden_maestra = :om ORDER BY cara",
+            params={"om": orden_maestra.strip()}, ttl=0
+        )
+        if df_piezas.empty:
+            return resultado
+
+        piezas_marcadas = {int(r["cara"]): str(r["orden_pieza"]) for _, r in df_piezas.iterrows()}
+        resultado["ambas_marcadas"] = (1 in piezas_marcadas and 2 in piezas_marcadas)
+
+        for cara_num in [1, 2]:
+            if cara_num not in piezas_marcadas:
+                continue
+            orden_p = piezas_marcadas[cara_num]
+            df_sect = conn.query(
+                "SELECT sector FROM registros WHERE TRIM(orden) = :o ORDER BY fecha_hora DESC LIMIT 1",
+                params={"o": orden_p}, ttl=0
+            )
+            sector_actual = str(df_sect.iloc[0]["sector"]).strip() if not df_sect.empty else "Desconocido"
+            esta_en_dvh   = (sector_actual == "En Proceso en DVH")
+            resultado[f"cara{cara_num}"] = {
+                "orden_pieza":  orden_p,
+                "sector_actual": sector_actual,
+                "esta_en_dvh":  esta_en_dvh,
+            }
+
+        ambas = all(
+            resultado[f"cara{c}"] is not None and resultado[f"cara{c}"]["esta_en_dvh"]
+            for c in [1, 2]
+        )
+        resultado["ambas_en_dvh"] = ambas
+    except Exception:
+        pass
+    return resultado
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  SISTEMA DE LICENCIA (Mantenido)
