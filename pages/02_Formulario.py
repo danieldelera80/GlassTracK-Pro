@@ -685,7 +685,7 @@ elif paso == 2:
                             for row in _piezas_e:
                                 _di_e = obtener_dvh_info(row['orden'])
                                 if render_tarjeta_orden(
-                                    row, f"&#x2198;&#xFE0F; TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                                    row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
                                     estado="pendiente", dentro_de_grupo=True,
                                     dvh_cara=_di_e["cara"] if _di_e else None
                                 ):
@@ -710,7 +710,7 @@ elif paso == 2:
                         row = _piezas_e[0]
                         _di_e = obtener_dvh_info(row['orden'])
                         if render_tarjeta_orden(
-                            row, f"&#x2198;&#xFE0F; TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                            row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
                             estado="pendiente", dvh_cara=_di_e["cara"] if _di_e else None
                         ):
                             ok, err = guardar_registro(
@@ -795,7 +795,7 @@ elif paso == 2:
                                 _di_p = obtener_dvh_info(row['orden'])
                                 _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                                 if render_tarjeta_orden(
-                                    row, f"&#x1F4E4; DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                    row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
                                     estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
                                     dvh_cara=_di_p["cara"] if _di_p else None
                                 ):
@@ -810,7 +810,7 @@ elif paso == 2:
                         _di_p = obtener_dvh_info(row['orden'])
                         _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
                         if render_tarjeta_orden(
-                            row, f"&#x1F4E4; DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                            row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
                             estado="en_proceso", meta_texto=_meta_proc,
                             dvh_cara=_di_p["cara"] if _di_p else None
                         ):
@@ -857,7 +857,7 @@ elif paso == 2:
                                 _di_d = obtener_dvh_info(row['orden'])
                                 _meta_ent = f"&#x1F6D2; {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                                 if render_tarjeta_orden(
-                                    row, "&#x1F680; ENTREGAR", f"ent_{row['orden']}",
+                                    row, "🚀 ENTREGAR", f"ent_{row['orden']}",
                                     estado="terminado", meta_texto=_meta_ent, dentro_de_grupo=True,
                                     dvh_cara=_di_d["cara"] if _di_d else None
                                 ):
@@ -871,7 +871,7 @@ elif paso == 2:
                         _di_d = obtener_dvh_info(row['orden'])
                         _meta_ent = f"&#x1F6D2; {row['carro']} · {row['lado']} · {row['fecha_hora']}"
                         if render_tarjeta_orden(
-                            row, "&#x1F680; ENTREGAR", f"ent_{row['orden']}",
+                            row, "🚀 ENTREGAR", f"ent_{row['orden']}",
                             estado="terminado", meta_texto=_meta_ent,
                             dvh_cara=_di_d["cara"] if _di_d else None
                         ):
@@ -1064,7 +1064,7 @@ elif paso == 4:
     if _sector_es_origen_dvh:
         _dvh_info_actual = obtener_dvh_info(_orden)
         _es_dvh_actual   = _dvh_info_actual is not None
-        es_dvh = st.checkbox("&#x1FA9F; Esta pieza es parte de un DVH", value=_es_dvh_actual, key="_d_es_dvh")
+        es_dvh = st.checkbox("🪟 Esta pieza es parte de un DVH", value=_es_dvh_actual, key="_d_es_dvh")
         if es_dvh:
             _cara_default = (_dvh_info_actual["cara"] - 1) if _es_dvh_actual else 0
             cara_dvh = st.radio("Cara", [1, 2], index=_cara_default, horizontal=True, key="_d_cara_dvh")
@@ -1095,7 +1095,7 @@ elif paso == 4:
 
         if _info_dvh is None:
             # Pieza NO marcada como DVH → flujo idéntico al actual + opción soft
-            _marcar_ahora = st.checkbox("&#x1FA9F; ¿Marcar como DVH ahora?", value=False, key="_d_marcar_dvh_soft")
+            _marcar_ahora = st.checkbox("🪟 ¿Marcar como DVH ahora?", value=False, key="_d_marcar_dvh_soft")
             if _marcar_ahora:
                 _cara_soft = st.radio("Cara", [1, 2], index=0, horizontal=True, key="_d_cara_soft")
             else:
@@ -1105,12 +1105,12 @@ elif paso == 4:
                 s for s in SECTORES
                 if s != st.session_state.sector_confirmado and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]
             ] + [SECTOR_TERMINADO, "Dañado"]
-            destino = st.selectbox("&#x1F4CD; Enviar a:", opciones_destino, key="_d_destino")
+            destino = st.selectbox("📍 Enviar a:", opciones_destino, key="_d_destino")
 
             st.write("")
-            if st.button("&#x1F4E4; FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
+            if st.button("📤 FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
                 if not carro_ok:
-                    st.warning("&#x26A0;&#xFE0F; Ingresá el número de carro.")
+                    st.warning("⚠️ Ingresá el número de carro.")
                 else:
                     carro = int(_carro_ef) if carro_ok else 0
                     if _marcar_ahora and _cara_soft:
@@ -1167,7 +1167,7 @@ elif paso == 4:
                         st.session_state.paso      = 2
                         st.rerun()
                     else:
-                        st.error(f"&#x274C; {err}")
+                        st.error(f"❌ {err}")
 
         else:
             # Pieza marcada como DVH → verificar pareja
@@ -1177,25 +1177,25 @@ elif paso == 4:
             if not _par["ambas_en_dvh"]:
                 _info_falta = _par.get(f"cara{_cara_falta}")
                 if _info_falta is None:
-                    st.error(f"&#x23F3; Cara {_cara_falta} todavia no fue marcada como DVH en sectores anteriores.")
+                    st.error(f"⏳ Cara {_cara_falta} todavia no fue marcada como DVH en sectores anteriores.")
                 else:
-                    st.warning(f"&#x23F3; Esperando Cara {_cara_falta}. Actualmente en: {_info_falta['sector_actual']}")
-                st.button("&#x1F512; DESPACHO BLOQUEADO — esperando pareja DVH",
+                    st.warning(f"⏳ Esperando Cara {_cara_falta}. Actualmente en: {_info_falta['sector_actual']}")
+                st.button("🔒 DESPACHO BLOQUEADO — esperando pareja DVH",
                           disabled=True, use_container_width=True)
             else:
                 # Ambas caras presentes en DVH → despacho consolidado
                 _maestra  = _info_dvh["maestra"]
                 _cara1    = _par["cara1"]
                 _cara2    = _par["cara2"]
-                st.success(f"&#x2705; Pareja DVH completa — se consolidará la orden {_maestra}")
+                st.success(f"✅ Pareja DVH completa — se consolidará la orden {_maestra}")
                 st.markdown(f"""
-                - **Cara 1** ({_cara1['orden_pieza']}): &#x2705; Aqui en DVH
-                - **Cara 2** ({_cara2['orden_pieza']}): &#x2705; Aqui en DVH
-                """)
+- **Cara 1** ({_cara1['orden_pieza']}): ✅ Aqui en DVH
+- **Cara 2** ({_cara2['orden_pieza']}): ✅ Aqui en DVH
+""")
                 st.write("")
-                if st.button("&#x1FA9F; CONSOLIDAR Y ENVIAR A TERMINADO", type="primary", use_container_width=True):
+                if st.button("🪟 CONSOLIDAR Y ENVIAR A TERMINADO", type="primary", use_container_width=True):
                     if not carro_ok:
-                        st.warning("&#x26A0;&#xFE0F; Ingresá el número de carro.")
+                        st.warning("⚠️ Ingresá el número de carro.")
                     else:
                         carro = int(_carro_ef) if carro_ok else 0
                         _op   = st.session_state.op_confirmado
@@ -1224,7 +1224,7 @@ elif paso == 4:
                             st.session_state.paso      = 2
                             st.rerun()
                         except Exception as _e:
-                            st.error(f"&#x274C; Error al consolidar: {_e}")
+                            st.error(f"❌ Error al consolidar: {_e}")
 
     else:
         # ── Flujo normal para todos los demás sectores ────────────────────────
@@ -1233,12 +1233,12 @@ elif paso == 4:
             if s != st.session_state.sector_confirmado and s not in [SECTOR_ENTREGA, SECTOR_TERMINADO]
         ] + [SECTOR_TERMINADO, "Dañado"]
 
-        destino = st.selectbox("&#x1F4CD; Enviar a:", opciones_destino, key="_d_destino")
+        destino = st.selectbox("📍 Enviar a:", opciones_destino, key="_d_destino")
 
         st.write("")
-        if st.button("&#x1F4E4; FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
+        if st.button("📤 FINALIZAR Y ENVIAR", type="primary", use_container_width=True):
             if not carro_ok and not es_error:
-                st.warning("&#x26A0;&#xFE0F; Ingresá el número de carro.")
+                st.warning("⚠️ Ingresá el número de carro.")
             else:
                 carro = int(_carro_ef) if carro_ok else 0
                 ok, err = True, None
@@ -1276,7 +1276,7 @@ elif paso == 4:
                     st.session_state.paso      = 2
                     st.rerun()
                 else:
-                    st.error(f"&#x274C; {err}")
+                    st.error(f"❌ {err}")
 
     st.write("")
     if st.button("← Volver a escanear", use_container_width=True):
