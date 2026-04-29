@@ -435,10 +435,11 @@ def procesar_orden(valor):
             st.session_state.paso = 3
             return
     
-    # Mantener el código ESCANEADO COMPLETO como base de la orden
-    # Si escanea "65455-1" → base = "65455-1" (las piezas serán 65455-1-1, 65455-1-2, etc)
-    # Si escanea "65455"   → base = "65455"   (las piezas serán 65455-1, 65455-2, etc)
+    # Verificar si la ORDEN BASE existe en cualquier sector
     import re
+    # Mantener el código escaneado COMPLETO como base de la orden
+    # 65455 → base = 65455 → piezas: 65455-1, 65455-2, etc
+    # 65455-1 → base = 65455-1 → piezas: 65455-1-1, 65455-1-2, etc
     orden_base = orden_normalizada
     
     # Query mejorado: solo trae el ESTADO ACTUAL de cada pieza (último registro)
