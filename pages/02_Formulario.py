@@ -897,7 +897,11 @@ elif paso == 2:
                                         elif _b_destino == SECTOR_TERMINADO:
                                             _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, SECTOR_TERMINADO)
                                         else:
-                                            _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"Enviado a {_b_destino}")
+                                            # Para Corte y Corte Laminado, enviar directo a EN PROCESO
+                                            if _b_destino in ["Corte", "Corte Laminado"]:
+                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"En Proceso en {_b_destino}")
+                                            else:
+                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"Enviado a {_b_destino}")
                                         if _bok_n:
                                             agregar_historial(_brow_n['orden'], st.session_state.sector_confirmado, enviado_a=_b_destino)
                                             _despachadas_b += 1
