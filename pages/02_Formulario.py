@@ -1,5 +1,6 @@
 import re
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import text
@@ -685,18 +686,18 @@ elif paso == 2:
             st.session_state.ord_n += 1
             st.rerun()
 
-    # Teclado numérico rápido con JavaScript
-    st.markdown("""
+    # Teclado numérico con JavaScript funcional
+    components.html("""
     <details style="margin-top: 12px;">
-        <summary style="cursor: pointer; padding: 12px; background: var(--color-background-primary);
-                        border: 0.5px solid var(--color-border-tertiary); border-radius: 8px;
+        <summary style="cursor: pointer; padding: 12px; background: #f8fafc;
+                        border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px;
                         font-size: 14px; font-weight: 500; list-style: none;">
             📱 Teclado Numérico
-            <span style="float: right; color: var(--color-text-tertiary); font-size: 12px;">▼</span>
+            <span style="float: right; color: #64748b; font-size: 12px;">▼</span>
         </summary>
 
-        <div style="padding: 16px; background: var(--color-background-primary);
-                    border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; margin-top: 4px;">
+        <div style="padding: 16px; background: #ffffff;
+                    border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; margin-top: 4px;">
 
             <div id="numpad-display" style="background: #1e293b; border: 2px solid #3b82f6;
                                            border-radius: 8px; padding: 12px; margin-bottom: 12px;
@@ -706,30 +707,40 @@ elif paso == 2:
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
-                <button onclick="numpadAdd('7')" style="min-height: 58px; font-size: 28px; font-weight: 900;">7</button>
-                <button onclick="numpadAdd('8')" style="min-height: 58px; font-size: 28px; font-weight: 900;">8</button>
-                <button onclick="numpadAdd('9')" style="min-height: 58px; font-size: 28px; font-weight: 900;">9</button>
+                <button onclick="numpadAdd('7')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">7</button>
+                <button onclick="numpadAdd('8')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">8</button>
+                <button onclick="numpadAdd('9')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">9</button>
 
-                <button onclick="numpadAdd('4')" style="min-height: 58px; font-size: 28px; font-weight: 900;">4</button>
-                <button onclick="numpadAdd('5')" style="min-height: 58px; font-size: 28px; font-weight: 900;">5</button>
-                <button onclick="numpadAdd('6')" style="min-height: 58px; font-size: 28px; font-weight: 900;">6</button>
+                <button onclick="numpadAdd('4')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">4</button>
+                <button onclick="numpadAdd('5')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">5</button>
+                <button onclick="numpadAdd('6')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">6</button>
 
-                <button onclick="numpadAdd('1')" style="min-height: 58px; font-size: 28px; font-weight: 900;">1</button>
-                <button onclick="numpadAdd('2')" style="min-height: 58px; font-size: 28px; font-weight: 900;">2</button>
-                <button onclick="numpadAdd('3')" style="min-height: 58px; font-size: 28px; font-weight: 900;">3</button>
+                <button onclick="numpadAdd('1')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">1</button>
+                <button onclick="numpadAdd('2')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">2</button>
+                <button onclick="numpadAdd('3')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">3</button>
 
                 <button onclick="numpadBack()" style="min-height: 58px; font-size: 24px; font-weight: 900;
-                                                     background: var(--color-background-secondary);">⌫</button>
-                <button onclick="numpadAdd('0')" style="min-height: 58px; font-size: 28px; font-weight: 900;">0</button>
+                        background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">⌫</button>
+                <button onclick="numpadAdd('0')" style="min-height: 58px; font-size: 28px; font-weight: 900;
+                        background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">0</button>
                 <button onclick="numpadAdd('-')" style="min-height: 58px; font-size: 28px; font-weight: 900;
-                                                       background: var(--color-background-secondary);">-</button>
+                        background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">-</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 <button onclick="numpadClear()" style="padding: 14px; font-size: 15px; font-weight: 700;
-                                                      background: var(--color-background-secondary);">🗑️ LIMPIAR</button>
+                        background: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;">🗑️ LIMPIAR</button>
                 <button onclick="numpadSearch()" style="padding: 14px; font-size: 15px; font-weight: 700;
-                                                       background: #3b82f6; color: white; border: none;">✅ BUSCAR</button>
+                        background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">✅ BUSCAR</button>
             </div>
         </div>
     </details>
@@ -760,17 +771,19 @@ elif paso == 2:
 
     function numpadSearch() {
         if (numpadValue) {
-            const input = document.querySelector('input[type="text"]');
-            if (input) {
-                input.value = numpadValue;
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-            }
+            window.parent.postMessage({type: 'streamlit:setComponentValue', value: numpadValue}, '*');
             numpadClear();
         }
     }
     </script>
-    """, unsafe_allow_html=True)
+    """, height=450)
+
+    # Capturar el valor del teclado
+    numpad_result = st.session_state.get('_numpad_value')
+    if numpad_result:
+        procesar_orden(numpad_result)
+        st.session_state['_numpad_value'] = None
+        st.rerun()
 
     st.write("")
     if st.button("← Cambiar sector", use_container_width=True):
