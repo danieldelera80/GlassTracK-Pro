@@ -978,8 +978,22 @@ if tab_admin is not None:
                     with conn.session as s:
                         s.execute(_text(query), params)
                         s.commit()
-                    st.success(f"✅ Cambios guardados en {orden_editar}.", icon="🚀")
+                    # Mensaje según el tipo de cambio
+                    if nuevo_estado != "(mismo estado)":
+                        estado_destino = map_estado[nuevo_estado]
+                        st.success(f"✅ Orden **{orden_editar}** movida a **{estado_destino}**.", icon="🚀")
+                        if estado_destino in ["Terminado", "Dañado", "Entrega"]:
+                            st.info(f"💡 La orden ya no aparece en Producción. Buscala en la pestaña correspondiente.", icon="ℹ️")
+                    else:
+                        st.success(f"✅ Número de orden actualizado: **{orden_final}**", icon="🚀")
+
+                    # Limpiar selección para que el dropdown se resetee
+                    if "_mon_orden_sel" in st.session_state:
+                        del st.session_state["_mon_orden_sel"]
+
                     st.cache_data.clear()
+                    import time
+                    time.sleep(1.5)
                     st.rerun()
                 except Exception as _e:
                     st.error(f"❌ Error al guardar: {_e}")
