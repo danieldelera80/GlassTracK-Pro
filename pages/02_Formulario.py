@@ -702,33 +702,33 @@ elif paso == 2:
                                            border-radius: 8px; padding: 12px; margin-bottom: 12px;
                                            text-align: center; min-height: 50px; display: flex;
                                            align-items: center; justify-content: center;">
-                <span style="font-size: 26px; font-weight: 800; color: #60a5fa; letter-spacing: 2px;">---</span>
+                <span style="font-size: 32px; font-weight: 900; color: #60a5fa; letter-spacing: 3px;">---</span>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
-                <button onclick="numpadAdd('7')" style="min-height: 55px; font-size: 22px; font-weight: 700;">7</button>
-                <button onclick="numpadAdd('8')" style="min-height: 55px; font-size: 22px; font-weight: 700;">8</button>
-                <button onclick="numpadAdd('9')" style="min-height: 55px; font-size: 22px; font-weight: 700;">9</button>
+                <button onclick="numpadAdd('7')" style="min-height: 58px; font-size: 28px; font-weight: 900;">7</button>
+                <button onclick="numpadAdd('8')" style="min-height: 58px; font-size: 28px; font-weight: 900;">8</button>
+                <button onclick="numpadAdd('9')" style="min-height: 58px; font-size: 28px; font-weight: 900;">9</button>
 
-                <button onclick="numpadAdd('4')" style="min-height: 55px; font-size: 22px; font-weight: 700;">4</button>
-                <button onclick="numpadAdd('5')" style="min-height: 55px; font-size: 22px; font-weight: 700;">5</button>
-                <button onclick="numpadAdd('6')" style="min-height: 55px; font-size: 22px; font-weight: 700;">6</button>
+                <button onclick="numpadAdd('4')" style="min-height: 58px; font-size: 28px; font-weight: 900;">4</button>
+                <button onclick="numpadAdd('5')" style="min-height: 58px; font-size: 28px; font-weight: 900;">5</button>
+                <button onclick="numpadAdd('6')" style="min-height: 58px; font-size: 28px; font-weight: 900;">6</button>
 
-                <button onclick="numpadAdd('1')" style="min-height: 55px; font-size: 22px; font-weight: 700;">1</button>
-                <button onclick="numpadAdd('2')" style="min-height: 55px; font-size: 22px; font-weight: 700;">2</button>
-                <button onclick="numpadAdd('3')" style="min-height: 55px; font-size: 22px; font-weight: 700;">3</button>
+                <button onclick="numpadAdd('1')" style="min-height: 58px; font-size: 28px; font-weight: 900;">1</button>
+                <button onclick="numpadAdd('2')" style="min-height: 58px; font-size: 28px; font-weight: 900;">2</button>
+                <button onclick="numpadAdd('3')" style="min-height: 58px; font-size: 28px; font-weight: 900;">3</button>
 
-                <button onclick="numpadBack()" style="min-height: 55px; font-size: 20px; font-weight: 700;
+                <button onclick="numpadBack()" style="min-height: 58px; font-size: 24px; font-weight: 900;
                                                      background: var(--color-background-secondary);">⌫</button>
-                <button onclick="numpadAdd('0')" style="min-height: 55px; font-size: 22px; font-weight: 700;">0</button>
-                <button onclick="numpadAdd('-')" style="min-height: 55px; font-size: 22px; font-weight: 700;
+                <button onclick="numpadAdd('0')" style="min-height: 58px; font-size: 28px; font-weight: 900;">0</button>
+                <button onclick="numpadAdd('-')" style="min-height: 58px; font-size: 28px; font-weight: 900;
                                                        background: var(--color-background-secondary);">-</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <button onclick="numpadClear()" style="padding: 12px; font-size: 14px; font-weight: 500;
+                <button onclick="numpadClear()" style="padding: 14px; font-size: 15px; font-weight: 700;
                                                       background: var(--color-background-secondary);">🗑️ LIMPIAR</button>
-                <button onclick="numpadSearch()" style="padding: 12px; font-size: 14px; font-weight: 500;
+                <button onclick="numpadSearch()" style="padding: 14px; font-size: 15px; font-weight: 700;
                                                        background: #3b82f6; color: white; border: none;">✅ BUSCAR</button>
             </div>
         </div>
@@ -754,7 +754,7 @@ elif paso == 2:
 
     function updateDisplay() {
         const display = document.getElementById('numpad-display');
-        display.innerHTML = '<span style="font-size: 26px; font-weight: 800; color: #60a5fa; letter-spacing: 2px;">'
+        display.innerHTML = '<span style="font-size: 32px; font-weight: 900; color: #60a5fa; letter-spacing: 3px;">'
                           + (numpadValue || '---') + '</span>';
     }
 
