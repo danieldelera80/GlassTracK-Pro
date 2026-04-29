@@ -390,76 +390,6 @@ def cb_orden():
     procesar_orden(val)
 
 
-def render_numpad(current_value=""):
-    """Teclado numérico para tablets - retorna el valor ingresado."""
-
-    with st.expander("📱 Teclado Numérico", expanded=False):
-        st.markdown(f"""
-        <div style="background:#1e293b;border:2px solid #3b82f6;border-radius:8px;
-                    padding:12px;margin-bottom:12px;text-align:center;">
-            <span style="font-size:26px;font-weight:800;color:#60a5fa;letter-spacing:2px;">
-                {current_value or '---'}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown('<div class="numpad-btn">', unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            b7 = st.button("7", key="np_7", use_container_width=True)
-        with col2:
-            b8 = st.button("8", key="np_8", use_container_width=True)
-        with col3:
-            b9 = st.button("9", key="np_9", use_container_width=True)
-
-        with col1:
-            b4 = st.button("4", key="np_4", use_container_width=True)
-        with col2:
-            b5 = st.button("5", key="np_5", use_container_width=True)
-        with col3:
-            b6 = st.button("6", key="np_6", use_container_width=True)
-
-        with col1:
-            b1 = st.button("1", key="np_1", use_container_width=True)
-        with col2:
-            b2 = st.button("2", key="np_2", use_container_width=True)
-        with col3:
-            b3 = st.button("3", key="np_3", use_container_width=True)
-
-        with col1:
-            bdel = st.button("⌫", key="np_del", use_container_width=True, type="secondary")
-        with col2:
-            b0 = st.button("0", key="np_0", use_container_width=True)
-        with col3:
-            bdash = st.button("-", key="np_dash", use_container_width=True, type="secondary")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        col_c, col_ok = st.columns(2)
-        with col_c:
-            bclear = st.button("🗑️ LIMPIAR", key="np_clear", use_container_width=True, type="secondary")
-        with col_ok:
-            bok = st.button("✅ BUSCAR", key="np_ok", use_container_width=True, type="primary")
-
-        if b7: return current_value + "7"
-        if b8: return current_value + "8"
-        if b9: return current_value + "9"
-        if b4: return current_value + "4"
-        if b5: return current_value + "5"
-        if b6: return current_value + "6"
-        if b1: return current_value + "1"
-        if b2: return current_value + "2"
-        if b3: return current_value + "3"
-        if b0: return current_value + "0"
-        if bdash: return current_value + "-"
-        if bdel: return current_value[:-1] if current_value else ""
-        if bclear: return ""
-        if bok and current_value: return f"SEARCH:{current_value}"
-
-    return current_value
-
-
 def agregar_historial(orden, sector, enviado_a=None):
     entry = {
         "orden":     orden,
@@ -755,20 +685,92 @@ elif paso == 2:
             st.session_state.ord_n += 1
             st.rerun()
 
-    # Teclado numérico para tablets
-    if "numpad_value" not in st.session_state:
-        st.session_state.numpad_value = ""
+    # Teclado numérico rápido con JavaScript
+    st.markdown("""
+    <details style="margin-top: 12px;">
+        <summary style="cursor: pointer; padding: 12px; background: var(--color-background-primary);
+                        border: 0.5px solid var(--color-border-tertiary); border-radius: 8px;
+                        font-size: 14px; font-weight: 500; list-style: none;">
+            📱 Teclado Numérico
+            <span style="float: right; color: var(--color-text-tertiary); font-size: 12px;">▼</span>
+        </summary>
 
-    resultado_numpad = render_numpad(st.session_state.numpad_value)
+        <div style="padding: 16px; background: var(--color-background-primary);
+                    border: 0.5px solid var(--color-border-tertiary); border-radius: 8px; margin-top: 4px;">
 
-    if resultado_numpad.startswith("SEARCH:"):
-        orden_buscar = resultado_numpad.replace("SEARCH:", "")
-        procesar_orden(orden_buscar)
-        st.session_state.numpad_value = ""
-        st.rerun()
-    elif resultado_numpad != st.session_state.numpad_value:
-        st.session_state.numpad_value = resultado_numpad
-        st.rerun()
+            <div id="numpad-display" style="background: #1e293b; border: 2px solid #3b82f6;
+                                           border-radius: 8px; padding: 12px; margin-bottom: 12px;
+                                           text-align: center; min-height: 50px; display: flex;
+                                           align-items: center; justify-content: center;">
+                <span style="font-size: 26px; font-weight: 800; color: #60a5fa; letter-spacing: 2px;">---</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
+                <button onclick="numpadAdd('7')" style="min-height: 55px; font-size: 22px; font-weight: 700;">7</button>
+                <button onclick="numpadAdd('8')" style="min-height: 55px; font-size: 22px; font-weight: 700;">8</button>
+                <button onclick="numpadAdd('9')" style="min-height: 55px; font-size: 22px; font-weight: 700;">9</button>
+
+                <button onclick="numpadAdd('4')" style="min-height: 55px; font-size: 22px; font-weight: 700;">4</button>
+                <button onclick="numpadAdd('5')" style="min-height: 55px; font-size: 22px; font-weight: 700;">5</button>
+                <button onclick="numpadAdd('6')" style="min-height: 55px; font-size: 22px; font-weight: 700;">6</button>
+
+                <button onclick="numpadAdd('1')" style="min-height: 55px; font-size: 22px; font-weight: 700;">1</button>
+                <button onclick="numpadAdd('2')" style="min-height: 55px; font-size: 22px; font-weight: 700;">2</button>
+                <button onclick="numpadAdd('3')" style="min-height: 55px; font-size: 22px; font-weight: 700;">3</button>
+
+                <button onclick="numpadBack()" style="min-height: 55px; font-size: 20px; font-weight: 700;
+                                                     background: var(--color-background-secondary);">⌫</button>
+                <button onclick="numpadAdd('0')" style="min-height: 55px; font-size: 22px; font-weight: 700;">0</button>
+                <button onclick="numpadAdd('-')" style="min-height: 55px; font-size: 22px; font-weight: 700;
+                                                       background: var(--color-background-secondary);">-</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button onclick="numpadClear()" style="padding: 12px; font-size: 14px; font-weight: 500;
+                                                      background: var(--color-background-secondary);">🗑️ LIMPIAR</button>
+                <button onclick="numpadSearch()" style="padding: 12px; font-size: 14px; font-weight: 500;
+                                                       background: #3b82f6; color: white; border: none;">✅ BUSCAR</button>
+            </div>
+        </div>
+    </details>
+
+    <script>
+    let numpadValue = '';
+
+    function numpadAdd(digit) {
+        numpadValue += digit;
+        updateDisplay();
+    }
+
+    function numpadBack() {
+        numpadValue = numpadValue.slice(0, -1);
+        updateDisplay();
+    }
+
+    function numpadClear() {
+        numpadValue = '';
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const display = document.getElementById('numpad-display');
+        display.innerHTML = '<span style="font-size: 26px; font-weight: 800; color: #60a5fa; letter-spacing: 2px;">'
+                          + (numpadValue || '---') + '</span>';
+    }
+
+    function numpadSearch() {
+        if (numpadValue) {
+            const input = document.querySelector('input[type="text"]');
+            if (input) {
+                input.value = numpadValue;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+            }
+            numpadClear();
+        }
+    }
+    </script>
+    """, unsafe_allow_html=True)
 
     st.write("")
     if st.button("← Cambiar sector", use_container_width=True):
