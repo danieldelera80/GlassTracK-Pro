@@ -486,6 +486,9 @@ def mostrar_modal_orden(orden_actual):
                 )
                 s.commit()
             st.success(f"✅ Registro actualizado: Carro {_nuevo_carro} / Lado {_nuevo_lado} / Sector {_nuevo_sector}")
+            st.cache_data.clear()  # CRÍTICO: limpiar caché antes del rerun
+            import time
+            time.sleep(0.5)
             st.rerun()
         elif pass_input:
             st.error("Contraseña incorrecta.")
