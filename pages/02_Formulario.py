@@ -1084,13 +1084,15 @@ elif paso == 2:
                 # ── Selección múltiple ─────────────────────────────────────────
                 _sel_proc = {_m: _pzs for _m, _pzs in _visible_p if st.session_state.get(f"chk_proc_{_m}", False)}
                 _n_sel_proc = len(_sel_proc)
+                _total_piezas = sum(len(piezas) for piezas in _sel_proc.values())
+                
                 if _n_sel_proc > 0:
-                    st.info(f"☑️ {_n_sel_proc} seleccionada{'s' if _n_sel_proc != 1 else ''}")
+                    st.info(f"☑️ {_total_piezas} pieza(s) seleccionada(s)")
 
-                # ── Formulario batch despachar (se muestra directo si hay 2+) ──
-                if _n_sel_proc >= 2:
+                # ── Formulario batch despachar (se muestra directo si hay 2+ piezas) ──
+                if _n_sel_proc >= 2 or _total_piezas >= 2:
                     st.markdown("---")
-                    st.markdown(f"**📤 Despachar {_n_sel_proc} órdenes seleccionadas**")
+                    st.markdown(f"**📤 Despachar {_total_piezas} piezas seleccionadas**")
                     _LADOS_B = ["A", "B", "Ambos"]
                     _es_dvh_b = (st.session_state.sector_confirmado == "DVH")
                     _es_opt_b = (st.session_state.sector_confirmado == "Optimización")
