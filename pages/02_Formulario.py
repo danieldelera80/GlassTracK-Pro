@@ -818,16 +818,8 @@ elif paso == 2:
                 if _n_sel_proc > 0:
                     st.info(f"☑️ {_n_sel_proc} seleccionada{'s' if _n_sel_proc != 1 else ''}")
 
-                _batch_desp_show = st.session_state.get("batch_desp_show", False)
-
+                # ── Formulario batch despachar (se muestra directo si hay 2+) ──
                 if _n_sel_proc >= 2:
-                    _btn_lbl_desp = "📤 DESPACHAR SELECCIONADAS ▲" if _batch_desp_show else f"📤 DESPACHAR SELECCIONADAS ({_n_sel_proc})"
-                    if st.button(_btn_lbl_desp, type="primary", use_container_width=True, key="btn_batch_desp"):
-                        st.session_state.batch_desp_show = not _batch_desp_show
-                        st.rerun()
-
-                # ── Formulario batch despachar ─────────────────────────────────
-                if _batch_desp_show and _n_sel_proc >= 2:
                     st.markdown("---")
                     st.markdown(f"**📤 Despachar {_n_sel_proc} órdenes seleccionadas**")
                     _LADOS_B = ["A", "B", "Ambos"]
@@ -858,75 +850,68 @@ elif paso == 2:
                         _b_destino = "Terminado"
 
                     st.write("")
-                    _col_cancel_b, _col_conf_b = st.columns(2)
-                    with _col_cancel_b:
-                        if st.button("✕ Cancelar", use_container_width=True, key="btn_cancel_batch_desp"):
-                            st.session_state.batch_desp_show = False
-                            st.rerun()
-                    with _col_conf_b:
-                        _btn_lbl_conf = "🪟 CONSOLIDAR TODAS" if _es_dvh_b else "📤 CONFIRMAR DESPACHO"
-                        if st.button(_btn_lbl_conf, type="primary", use_container_width=True, key="btn_confirm_batch_desp"):
-                            if not _es_dvh_b and not _b_carro_ok and not _es_error_b:
-                                st.warning("⚠️ Ingresá el número de carro.")
-                            else:
-                                _b_carro_val = int(_b_carro_str.strip()) if _b_carro_ok else 0
-                                _despachadas_b, _errores_db = 0, []
-                                if _es_dvh_b:
-                                    for _bm_dvh in list(_sel_proc.keys()):
-                                        _par_b = _pares_p.get(_bm_dvh, {})
-                                        if _par_b.get("ambas_en_dvh", False):
-                                            _c1_b = _par_b["cara1"]
-                                            _c2_b = _par_b["cara2"]
-                                            try:
-                                                _ts_b = _now_utc()
-                                                _op_b = st.session_state.op_confirmado
-                                                with conn.session as _sb:
-                                                    for _cp_b in [_c1_b, _c2_b]:
-                                                        _sb.execute(text("""
-                                                            INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
-                                                            VALUES (:f, :o, :c, :l, :u, 'Consolidada en DVH')
-                                                        """), {"f": _ts_b, "o": _cp_b["orden_pieza"],
-                                                               "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                    _btn_lbl_conf = "🪟 CONSOLIDAR TODAS" if _es_dvh_b else "📤 CONFIRMAR DESPACHO"
+                    if st.button(_btn_lbl_conf, type="primary", use_container_width=True, key="btn_confirm_batch_desp"):
+                        if not _es_dvh_b and not _b_carro_ok and not _es_error_b:
+                            st.warning("⚠️ Ingresá el número de carro.")
+                        else:
+                            _b_carro_val = int(_b_carro_str.strip()) if _b_carro_ok else 0
+                            _despachadas_b, _errores_db = 0, []
+                            if _es_dvh_b:
+                                for _bm_dvh in list(_sel_proc.keys()):
+                                    _par_b = _pares_p.get(_bm_dvh, {})
+                                    if _par_b.get("ambas_en_dvh", False):
+                                        _c1_b = _par_b["cara1"]
+                                        _c2_b = _par_b["cara2"]
+                                        try:
+                                            _ts_b = _now_utc()
+                                            _op_b = st.session_state.op_confirmado
+                                            with conn.session as _sb:
+                                                for _cp_b in [_c1_b, _c2_b]:
                                                     _sb.execute(text("""
                                                         INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
-                                                        VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
-                                                    """), {"f": _ts_b, "o": _bm_dvh, "c": _b_carro_val, "l": _b_lado, "u": _op_b})
-                                                    _sb.commit()
-                                                agregar_historial(_bm_dvh, "DVH", enviado_a="Terminado (DVH)")
-                                                _despachadas_b += 1
-                                            except Exception as _exc_dvh:
-                                                _errores_db.append(_bm_dvh)
-                                        else:
+                                                        VALUES (:f, :o, :c, :l, :u, 'Consolidada en DVH')
+                                                    """), {"f": _ts_b, "o": _cp_b["orden_pieza"],
+                                                           "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                                                _sb.execute(text("""
+                                                    INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
+                                                    VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
+                                                """), {"f": _ts_b, "o": _bm_dvh, "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                                                _sb.commit()
+                                            agregar_historial(_bm_dvh, "DVH", enviado_a="Terminado (DVH)")
+                                            _despachadas_b += 1
+                                        except Exception as _exc_dvh:
                                             _errores_db.append(_bm_dvh)
-                                else:
-                                    for _bm_n, _bpzs_n in _sel_proc.items():
-                                        for _brow_n in _bpzs_n:
-                                            if _b_destino == "Dañado":
-                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, "Dañado")
-                                            elif _b_destino == SECTOR_TERMINADO:
-                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, SECTOR_TERMINADO)
-                                            else:
-                                                _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"Enviado a {_b_destino}")
-                                            if _bok_n:
-                                                agregar_historial(_brow_n['orden'], st.session_state.sector_confirmado, enviado_a=_b_destino)
-                                                _despachadas_b += 1
-                                            else:
-                                                _errores_db.append(_brow_n['orden'])
-                                for _bm_c in list(_sel_proc.keys()):
-                                    st.session_state[f"chk_proc_{_bm_c}"] = False
-                                st.session_state.batch_desp_show = False
-                                st.session_state.ord_n += 1
-                                if _despachadas_b > 0:
-                                    _dest_lbl = "Terminado (DVH)" if _es_dvh_b else _b_destino
-                                    st.session_state.ultimo = {
-                                        "orden": f"{_despachadas_b} órdenes",
-                                        "sector": st.session_state.sector_confirmado,
-                                        "op": st.session_state.op_confirmado,
-                                        "enviado_a": _dest_lbl, "offline": False
-                                    }
-                                if _errores_db:
-                                    st.session_state.reg_error = f"Errores en: {', '.join(_errores_db[:5])}"
-                                st.rerun()
+                                    else:
+                                        _errores_db.append(_bm_dvh)
+                            else:
+                                for _bm_n, _bpzs_n in _sel_proc.items():
+                                    for _brow_n in _bpzs_n:
+                                        if _b_destino == "Dañado":
+                                            _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, "Dañado")
+                                        elif _b_destino == SECTOR_TERMINADO:
+                                            _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, SECTOR_TERMINADO)
+                                        else:
+                                            _bok_n, _berr_n = guardar_registro(_brow_n['orden'], _b_carro_val, _b_lado, st.session_state.op_confirmado, f"Enviado a {_b_destino}")
+                                        if _bok_n:
+                                            agregar_historial(_brow_n['orden'], st.session_state.sector_confirmado, enviado_a=_b_destino)
+                                            _despachadas_b += 1
+                                        else:
+                                            _errores_db.append(_brow_n['orden'])
+                            for _bm_c in list(_sel_proc.keys()):
+                                st.session_state[f"chk_proc_{_bm_c}"] = False
+                            st.session_state.ord_n += 1
+                            if _despachadas_b > 0:
+                                _dest_lbl = "Terminado (DVH)" if _es_dvh_b else _b_destino
+                                st.session_state.ultimo = {
+                                    "orden": f"{_despachadas_b} órdenes",
+                                    "sector": st.session_state.sector_confirmado,
+                                    "op": st.session_state.op_confirmado,
+                                    "enviado_a": _dest_lbl, "offline": False
+                                }
+                            if _errores_db:
+                                st.session_state.reg_error = f"Errores en: {', '.join(_errores_db[:5])}"
+                            st.rerun()
                     st.markdown("---")
 
                 for _maestro_p, _piezas_p in _visible_p:
@@ -1117,9 +1102,15 @@ elif paso == 3:
                 st.warning("⚠️ Ingresá el número de carro.")
             else:
                 carro_val = int(carro_str.strip()) if (carro_ok and carro_str.strip()) else (_cp if _cp > 0 else 0)
-                ok, err = guardar_registro(_orden, carro_val, lado,
-                                           st.session_state.op_confirmado,
-                                           f"Enviado a {destino_opt}")
+                # Para Corte y Corte Laminado, las órdenes van directo a EN PROCESO (sin pasar por TOMAR)
+                if destino_opt in ["Corte", "Corte Laminado"]:
+                    ok, err = guardar_registro(_orden, carro_val, lado,
+                                               st.session_state.op_confirmado,
+                                               f"En Proceso en {destino_opt}")
+                else:
+                    ok, err = guardar_registro(_orden, carro_val, lado,
+                                               st.session_state.op_confirmado,
+                                               f"Enviado a {destino_opt}")
                 if ok:
                     agregar_historial(_orden, st.session_state.sector_confirmado, enviado_a=destino_opt)
                     st.session_state.ultimo = {"orden": _orden, "sector": st.session_state.sector_confirmado,
@@ -1331,7 +1322,11 @@ elif paso == 4:
                     elif destino == SECTOR_TERMINADO:
                         ok, err = guardar_registro(_orden, carro, lado, st.session_state.op_confirmado, SECTOR_TERMINADO)
                     else:
-                        ok, err = guardar_registro(_orden, carro, lado, st.session_state.op_confirmado, f"Enviado a {destino}")
+                        # Para Corte y Corte Laminado, las órdenes van directo a EN PROCESO (sin pasar por TOMAR)
+                        if destino in ["Corte", "Corte Laminado"]:
+                            ok, err = guardar_registro(_orden, carro, lado, st.session_state.op_confirmado, f"En Proceso en {destino}")
+                        else:
+                            ok, err = guardar_registro(_orden, carro, lado, st.session_state.op_confirmado, f"Enviado a {destino}")
                     if ok:
                         agregar_historial(_orden, st.session_state.sector_confirmado, enviado_a=destino)
                         st.session_state.ultimo = {
@@ -1437,8 +1432,13 @@ elif paso == 4:
                     ok, err = guardar_registro(_orden, carro, lado,
                                                st.session_state.op_confirmado, SECTOR_TERMINADO)
                 else:
-                    ok, err = guardar_registro(_orden, carro, lado,
-                                               st.session_state.op_confirmado, f"Enviado a {destino}")
+                    # Para Corte y Corte Laminado, las órdenes van directo a EN PROCESO (sin pasar por TOMAR)
+                    if destino in ["Corte", "Corte Laminado"]:
+                        ok, err = guardar_registro(_orden, carro, lado,
+                                                   st.session_state.op_confirmado, f"En Proceso en {destino}")
+                    else:
+                        ok, err = guardar_registro(_orden, carro, lado,
+                                                   st.session_state.op_confirmado, f"Enviado a {destino}")
 
                 if ok:
                     if err == "OFFLINE": es_offline = True
