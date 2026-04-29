@@ -22,6 +22,16 @@ conn = get_connection()
 
 st.markdown(CSS_GLOBAL, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+.numpad-btn button {
+    min-height: 55px !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # CSS extra para grilla de sectores y botones de kanban
 st.markdown("""
 <style>
@@ -380,6 +390,76 @@ def cb_orden():
     procesar_orden(val)
 
 
+def render_numpad(current_value=""):
+    """Teclado numérico para tablets - retorna el valor ingresado."""
+
+    with st.expander("📱 Teclado Numérico", expanded=False):
+        st.markdown(f"""
+        <div style="background:#1e293b;border:2px solid #3b82f6;border-radius:8px;
+                    padding:12px;margin-bottom:12px;text-align:center;">
+            <span style="font-size:26px;font-weight:800;color:#60a5fa;letter-spacing:2px;">
+                {current_value or '---'}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="numpad-btn">', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            b7 = st.button("7", key="np_7", use_container_width=True)
+        with col2:
+            b8 = st.button("8", key="np_8", use_container_width=True)
+        with col3:
+            b9 = st.button("9", key="np_9", use_container_width=True)
+
+        with col1:
+            b4 = st.button("4", key="np_4", use_container_width=True)
+        with col2:
+            b5 = st.button("5", key="np_5", use_container_width=True)
+        with col3:
+            b6 = st.button("6", key="np_6", use_container_width=True)
+
+        with col1:
+            b1 = st.button("1", key="np_1", use_container_width=True)
+        with col2:
+            b2 = st.button("2", key="np_2", use_container_width=True)
+        with col3:
+            b3 = st.button("3", key="np_3", use_container_width=True)
+
+        with col1:
+            bdel = st.button("⌫", key="np_del", use_container_width=True, type="secondary")
+        with col2:
+            b0 = st.button("0", key="np_0", use_container_width=True)
+        with col3:
+            bdash = st.button("-", key="np_dash", use_container_width=True, type="secondary")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        col_c, col_ok = st.columns(2)
+        with col_c:
+            bclear = st.button("🗑️ LIMPIAR", key="np_clear", use_container_width=True, type="secondary")
+        with col_ok:
+            bok = st.button("✅ BUSCAR", key="np_ok", use_container_width=True, type="primary")
+
+        if b7: return current_value + "7"
+        if b8: return current_value + "8"
+        if b9: return current_value + "9"
+        if b4: return current_value + "4"
+        if b5: return current_value + "5"
+        if b6: return current_value + "6"
+        if b1: return current_value + "1"
+        if b2: return current_value + "2"
+        if b3: return current_value + "3"
+        if b0: return current_value + "0"
+        if bdash: return current_value + "-"
+        if bdel: return current_value[:-1] if current_value else ""
+        if bclear: return ""
+        if bok and current_value: return f"SEARCH:{current_value}"
+
+    return current_value
+
+
 def agregar_historial(orden, sector, enviado_a=None):
     entry = {
         "orden":     orden,
@@ -674,6 +754,21 @@ elif paso == 2:
             st.session_state.modo_camara = False
             st.session_state.ord_n += 1
             st.rerun()
+
+    # Teclado numérico para tablets
+    if "numpad_value" not in st.session_state:
+        st.session_state.numpad_value = ""
+
+    resultado_numpad = render_numpad(st.session_state.numpad_value)
+
+    if resultado_numpad.startswith("SEARCH:"):
+        orden_buscar = resultado_numpad.replace("SEARCH:", "")
+        procesar_orden(orden_buscar)
+        st.session_state.numpad_value = ""
+        st.rerun()
+    elif resultado_numpad != st.session_state.numpad_value:
+        st.session_state.numpad_value = resultado_numpad
+        st.rerun()
 
     st.write("")
     if st.button("← Cambiar sector", use_container_width=True):
