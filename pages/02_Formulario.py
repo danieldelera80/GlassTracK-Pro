@@ -1165,8 +1165,19 @@ elif paso == 2:
                     else:
                         _pares_e = {}
     
-                    # ── Selección múltiple ─────────────────────────────────────────
-                    _sel_pend = {_m: _pzs for _m, _pzs in _visible_e if st.session_state.get(f"chk_pend_{_m}", False)}
+                    # ── Selección múltiple (grupo o individual) ───────────────────
+                    _sel_pend = {}
+                    for _m, _pzs in _visible_e:
+                        # Buscar piezas individuales marcadas
+                        _piezas_indiv = [p for p in _pzs if st.session_state.get(f"chk_pend_pieza_{p['orden']}", False)]
+                        
+                        if _piezas_indiv:
+                            # Si hay individuales marcadas, usar SOLO esas (prioridad)
+                            _sel_pend[_m] = _piezas_indiv
+                        elif st.session_state.get(f"chk_pend_{_m}", False):
+                            # Si no hay individuales pero el grupo está marcado, usar todas
+                            _sel_pend[_m] = _pzs
+                    
                     _n_sel_pend = len(_sel_pend)
                     _total_piezas_pend = sum(len(piezas) for piezas in _sel_pend.values())
                     
@@ -1240,28 +1251,33 @@ elif paso == 2:
                                 with st.expander("ver piezas", expanded=False):
                                     for row in _piezas_e:
                                         _di_e = _dvh_bulk_e.get(row['orden'])
-                                        if render_tarjeta_orden(
-                                            row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
-                                            estado="pendiente", dentro_de_grupo=True,
-                                            dvh_cara=_di_e["cara"] if _di_e else None
-                                        ):
-                                            ok, err = guardar_registro(
-                                                row['orden'], row.get('carro', 0), row.get('lado', '-'),
-                                                st.session_state.op_confirmado,
-                                                f"En Proceso en {st.session_state.sector_confirmado}"
-                                            )
-                                            if ok:
-                                                agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                                                st.session_state.ultimo = {
-                                                    "orden": row['orden'],
-                                                    "sector": f"En Proceso en {st.session_state.sector_confirmado}",
-                                                    "op": st.session_state.op_confirmado,
-                                                    "offline": err == "OFFLINE"
-                                                }
-                                                st.session_state.ord_n += 1
-                                                st.rerun()
-                                            else:
-                                                st.error(err)
+                                        # Checkbox individual + tarjeta
+                                        _col_chk_indiv, _col_card_indiv = st.columns([0.06, 0.94])
+                                        with _col_chk_indiv:
+                                            st.checkbox("", key=f"chk_pend_pieza_{row['orden']}", label_visibility="collapsed")
+                                        with _col_card_indiv:
+                                            if render_tarjeta_orden(
+                                                row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                                                estado="pendiente", dentro_de_grupo=True,
+                                                dvh_cara=_di_e["cara"] if _di_e else None
+                                            ):
+                                                ok, err = guardar_registro(
+                                                    row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                                    st.session_state.op_confirmado,
+                                                    f"En Proceso en {st.session_state.sector_confirmado}"
+                                                )
+                                                if ok:
+                                                    agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                                    st.session_state.ultimo = {
+                                                        "orden": row['orden'],
+                                                        "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                                        "op": st.session_state.op_confirmado,
+                                                        "offline": err == "OFFLINE"
+                                                    }
+                                                    st.session_state.ord_n += 1
+                                                    st.rerun()
+                                                else:
+                                                    st.error(err)
                             else:
                                 row = _piezas_e[0]
                                 _di_e = _dvh_bulk_e.get(row['orden'])
@@ -1322,8 +1338,19 @@ elif paso == 2:
                 else:
                     _pares_p = {}
 
-                # ── Selección múltiple ─────────────────────────────────────────
-                _sel_proc = {_m: _pzs for _m, _pzs in _visible_p if st.session_state.get(f"chk_proc_{_m}", False)}
+                # ── Selección múltiple (grupo o individual) ───────────────────
+                _sel_proc = {}
+                for _m, _pzs in _visible_p:
+                    # Buscar piezas individuales marcadas
+                    _piezas_indiv_p = [p for p in _pzs if st.session_state.get(f"chk_proc_pieza_{p['orden']}", False)]
+                    
+                    if _piezas_indiv_p:
+                        # Si hay individuales marcadas, usar SOLO esas (prioridad)
+                        _sel_proc[_m] = _piezas_indiv_p
+                    elif st.session_state.get(f"chk_proc_{_m}", False):
+                        # Si no hay individuales pero el grupo está marcado, usar todas
+                        _sel_proc[_m] = _pzs
+                
                 _n_sel_proc = len(_sel_proc)
                 _total_piezas = sum(len(piezas) for piezas in _sel_proc.values())
                 
@@ -1488,17 +1515,22 @@ elif paso == 2:
                                 for row in _piezas_p:
                                     _di_p = _dvh_bulk_p.get(row['orden'])
                                     _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
-                                    if render_tarjeta_orden(
-                                        row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                                        estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
-                                        dvh_cara=_di_p["cara"] if _di_p else None
-                                    ):
-                                        st.session_state.orden_val    = row['orden']
-                                        st.session_state.carro_previo = int(row.get('carro') or 0)
-                                        st.session_state.lado_previo  = str(row.get('lado') or 'A')
-                                        st.session_state.paso3_fresh  = True
-                                        st.session_state.paso         = 4
-                                        st.rerun()
+                                    # Checkbox individual + tarjeta
+                                    _col_chk_indiv_p, _col_card_indiv_p = st.columns([0.06, 0.94])
+                                    with _col_chk_indiv_p:
+                                        st.checkbox("", key=f"chk_proc_pieza_{row['orden']}", label_visibility="collapsed")
+                                    with _col_card_indiv_p:
+                                        if render_tarjeta_orden(
+                                            row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                            estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
+                                            dvh_cara=_di_p["cara"] if _di_p else None
+                                        ):
+                                            st.session_state.orden_val    = row['orden']
+                                            st.session_state.carro_previo = int(row.get('carro') or 0)
+                                            st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                                            st.session_state.paso3_fresh  = True
+                                            st.session_state.paso         = 4
+                                            st.rerun()
                         else:
                             row = _piezas_p[0]
                             _di_p = _dvh_bulk_p.get(row['orden'])
