@@ -356,50 +356,43 @@ def confirmar_sector(sector):
 def procesar_orden(valor):
     if not valor.strip():
         return
-
+    
     sector_actual = st.session_state.sector_confirmado
     orden_buscada = valor.strip()
-
+    
     # Obtener listas del sector actual
     entrantes, en_proceso = obtener_activos(sector_actual)
-
-    # Normalizar búsqueda (ignorar prefijos de urgencia)
+    
+    # Normalizar búsqueda (ignorar prefijos)
     orden_normalizada = _PFX_RE.sub("", orden_buscada).strip()
-
-    # Buscar en PENDIENTES (Enviado a mi sector)
+    
+    # Buscar en PENDIENTES
     orden_en_pendientes = None
     for ord_pend in entrantes:
         ord_norm_pend = _PFX_RE.sub("", ord_pend['orden']).strip()
         if ord_norm_pend == orden_normalizada or ord_pend['orden'].strip() == orden_buscada:
             orden_en_pendientes = ord_pend
             break
-
-    # Buscar en EN PROCESO (En Proceso en mi sector)
+    
+    # Buscar en EN PROCESO
     orden_en_proceso = None
     for ord_proc in en_proceso:
         ord_norm_proc = _PFX_RE.sub("", ord_proc['orden']).strip()
         if ord_norm_proc == orden_normalizada or ord_proc['orden'].strip() == orden_buscada:
             orden_en_proceso = ord_proc
             break
-
+    
+    # Si existe en el sector actual → ir al paso correcto
     if sector_actual in ["Corte", "Corte Laminado"]:
-        # En Corte/Corte Laminado: si existe → directo a DESPACHAR
-        if orden_en_proceso:
-            st.session_state.orden_val = orden_en_proceso['orden']
-            st.session_state.carro_previo = orden_en_proceso.get('carro', 0)
-            st.session_state.lado_previo = orden_en_proceso.get('lado', 'A')
-            st.session_state.paso3_fresh = True
-            st.session_state.paso = 4
-            return
-        elif orden_en_pendientes:
-            st.session_state.orden_val = orden_en_pendientes['orden']
-            st.session_state.carro_previo = orden_en_pendientes.get('carro', 0)
-            st.session_state.lado_previo = orden_en_pendientes.get('lado', 'A')
+        if orden_en_proceso or orden_en_pendientes:
+            orden_encontrada = orden_en_proceso or orden_en_pendientes
+            st.session_state.orden_val = orden_encontrada['orden']
+            st.session_state.carro_previo = orden_encontrada.get('carro', 0)
+            st.session_state.lado_previo = orden_encontrada.get('lado', 'A')
             st.session_state.paso3_fresh = True
             st.session_state.paso = 4
             return
     else:
-        # Otros sectores: lógica normal
         if orden_en_proceso:
             st.session_state.orden_val = orden_en_proceso['orden']
             st.session_state.carro_previo = orden_en_proceso.get('carro', 0)
@@ -414,16 +407,31 @@ def procesar_orden(valor):
             st.session_state.paso3_fresh = True
             st.session_state.paso = 3
             return
-
-    # SOLO EN OPTIMIZACIÓN: Detectar si es una sub-pieza de orden existente
+    
+    # ═══════════════════════════════════════════════════════════════
+    # VERIFICACIÓN 1: ¿Existe en OTRO SECTOR? (anti-duplicados)
+    # ═══════════════════════════════════════════════════════════════
+    verificacion = verificar_orden_en_otro_sector(orden_buscada, sector_actual)
+    
+    if verificacion["existe"]:
+        st.session_state.orden_duplicada = {
+            "orden_original": verificacion["orden"],
+            "sector_origen": verificacion["sector"],
+            "orden_escaneada": orden_buscada
+        }
+        st.session_state.mostrar_advertencia_duplicado = True
+        return
+    
+    # ═══════════════════════════════════════════════════════════════
+    # VERIFICACIÓN 2: ¿Existe como ORDEN BASE? (carga masiva)
+    # SOLO EN OPTIMIZACIÓN
+    # ═══════════════════════════════════════════════════════════════
     if sector_actual == "Optimización":
-        # Extraer orden base (ej: 66045-1 → 66045)
         import re
         match = re.match(r'^([A-Z\d\-]+?)(?:-(\d+))?$', orden_buscada)
         if match:
             orden_base = match.group(1)
             
-            # Verificar si ya existe la orden base en el sistema
             df_check = conn.query(
                 "SELECT DISTINCT orden FROM registros WHERE orden LIKE :base LIMIT 1",
                 params={"base": f"{orden_base}%"},
@@ -431,33 +439,22 @@ def procesar_orden(valor):
             )
             
             if not df_check.empty:
-                # Ya existe la orden base → ofrecer carga masiva
                 st.session_state.carga_masiva_trigger = {
                     "orden_base": orden_base,
                     "orden_actual": orden_buscada
                 }
                 return
-
-    # Si NO existe en las listas → verificar duplicado en otro sector
-    verificacion = verificar_orden_en_otro_sector(orden_buscada, sector_actual)
-
-    if verificacion["existe"]:
-        st.session_state.orden_duplicada = {
-            "orden_original": verificacion["orden"],
-            "sector_origen":  verificacion["sector"],
-            "orden_escaneada": orden_buscada
-        }
-        st.session_state.mostrar_advertencia_duplicado = True
-        return
-
-    # Orden nueva → resolver nombre y proceder
+    
+    # ═══════════════════════════════════════════════════════════════
+    # ORDEN NUEVA: Proceder normalmente
+    # ═══════════════════════════════════════════════════════════════
     orden_resuelta = resolver_nombre_orden(orden_buscada)
     st.session_state.orden_val = orden_resuelta
     carro_p, lado_p = obtener_carro_lado(orden_resuelta)
     st.session_state.carro_previo = carro_p
     st.session_state.lado_previo = lado_p
     st.session_state.paso3_fresh = True
-
+    
     if sector_actual in SECTORES_ESCANEO_DIRECTO:
         st.session_state.entrega_lista = True
     elif sector_actual in ["Corte", "Corte Laminado"]:
