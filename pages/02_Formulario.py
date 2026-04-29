@@ -357,29 +357,87 @@ def procesar_orden(valor):
     if not valor.strip():
         return
 
-    # Verificar si existe en otro sector
     sector_actual = st.session_state.sector_confirmado
-    verificacion = verificar_orden_en_otro_sector(valor.strip(), sector_actual)
+    orden_buscada = valor.strip()
+
+    # Obtener listas del sector actual
+    entrantes, en_proceso = obtener_activos(sector_actual)
+
+    # Normalizar búsqueda (ignorar prefijos de urgencia)
+    orden_normalizada = _PFX_RE.sub("", orden_buscada).strip()
+
+    # Buscar en PENDIENTES (Enviado a mi sector)
+    orden_en_pendientes = None
+    for ord_pend in entrantes:
+        ord_norm_pend = _PFX_RE.sub("", ord_pend['orden']).strip()
+        if ord_norm_pend == orden_normalizada or ord_pend['orden'].strip() == orden_buscada:
+            orden_en_pendientes = ord_pend
+            break
+
+    # Buscar en EN PROCESO (En Proceso en mi sector)
+    orden_en_proceso = None
+    for ord_proc in en_proceso:
+        ord_norm_proc = _PFX_RE.sub("", ord_proc['orden']).strip()
+        if ord_norm_proc == orden_normalizada or ord_proc['orden'].strip() == orden_buscada:
+            orden_en_proceso = ord_proc
+            break
+
+    if sector_actual in ["Corte", "Corte Laminado"]:
+        # En Corte/Corte Laminado: si existe → directo a DESPACHAR
+        if orden_en_proceso:
+            st.session_state.orden_val = orden_en_proceso['orden']
+            st.session_state.carro_previo = orden_en_proceso.get('carro', 0)
+            st.session_state.lado_previo = orden_en_proceso.get('lado', 'A')
+            st.session_state.paso3_fresh = True
+            st.session_state.paso = 4
+            return
+        elif orden_en_pendientes:
+            st.session_state.orden_val = orden_en_pendientes['orden']
+            st.session_state.carro_previo = orden_en_pendientes.get('carro', 0)
+            st.session_state.lado_previo = orden_en_pendientes.get('lado', 'A')
+            st.session_state.paso3_fresh = True
+            st.session_state.paso = 4
+            return
+    else:
+        # Otros sectores: lógica normal
+        if orden_en_proceso:
+            st.session_state.orden_val = orden_en_proceso['orden']
+            st.session_state.carro_previo = orden_en_proceso.get('carro', 0)
+            st.session_state.lado_previo = orden_en_proceso.get('lado', 'A')
+            st.session_state.paso3_fresh = True
+            st.session_state.paso = 4
+            return
+        elif orden_en_pendientes:
+            st.session_state.orden_val = orden_en_pendientes['orden']
+            st.session_state.carro_previo = orden_en_pendientes.get('carro', 0)
+            st.session_state.lado_previo = orden_en_pendientes.get('lado', 'A')
+            st.session_state.paso3_fresh = True
+            st.session_state.paso = 3
+            return
+
+    # Si NO existe en las listas → verificar duplicado en otro sector
+    verificacion = verificar_orden_en_otro_sector(orden_buscada, sector_actual)
 
     if verificacion["existe"]:
         st.session_state.orden_duplicada = {
-            "orden_original":  verificacion["orden"],
-            "sector_origen":   verificacion["sector"],
-            "orden_escaneada": valor.strip()
+            "orden_original": verificacion["orden"],
+            "sector_origen":  verificacion["sector"],
+            "orden_escaneada": orden_buscada
         }
         st.session_state.mostrar_advertencia_duplicado = True
         return
 
-    # Si no existe en otro sector, proceder normal
-    orden_resuelta = resolver_nombre_orden(valor.strip())
+    # Orden nueva → resolver nombre y proceder
+    orden_resuelta = resolver_nombre_orden(orden_buscada)
     st.session_state.orden_val = orden_resuelta
     carro_p, lado_p = obtener_carro_lado(orden_resuelta)
     st.session_state.carro_previo = carro_p
     st.session_state.lado_previo = lado_p
     st.session_state.paso3_fresh = True
-    if st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRECTO:
+
+    if sector_actual in SECTORES_ESCANEO_DIRECTO:
         st.session_state.entrega_lista = True
-    elif st.session_state.sector_confirmado in ["Corte", "Corte Laminado"]:
+    elif sector_actual in ["Corte", "Corte Laminado"]:
         st.session_state.paso = 4
     else:
         st.session_state.paso = 3
