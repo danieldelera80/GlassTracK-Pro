@@ -435,17 +435,46 @@ def procesar_orden(valor):
             st.session_state.paso = 3
             return
     
-    # Verificar si la ORDEN BASE existe en cualquier sector (incluido el actual)
+    # Verificar si la ORDEN BASE existe en cualquier sector (con búsqueda PRECISA)
     import re
     match = re.match(r'^(.+?)(?:-(\d+))?$', orden_normalizada)
     orden_base = match.group(1) if match else orden_normalizada
     
+    # Query mejorado: solo trae el ESTADO ACTUAL de cada pieza (último registro)
+    # y hace match EXACTO de la orden base (no captura 648470 cuando buscas 64847)
     df_existencias = conn.query(
-        "SELECT orden, sector FROM registros "
-        "WHERE TRIM(orden) LIKE :base_pattern "
-        "AND sector != 'Consolidada en DVH' "
-        "ORDER BY fecha_hora DESC",
-        params={"base_pattern": f"{orden_base}%"},
+        """
+        WITH ultimo_estado AS (
+            SELECT DISTINCT ON (TRIM(orden)) 
+                TRIM(orden) as orden, 
+                TRIM(sector) as sector,
+                fecha_hora
+            FROM registros
+            WHERE sector != 'Consolidada en DVH'
+            ORDER BY TRIM(orden), fecha_hora DESC
+        )
+        SELECT orden, sector FROM ultimo_estado
+        WHERE (
+            orden = :exacto
+            OR orden ~ :patron_pieza
+            OR orden = :urg_exacto
+            OR orden ~ :urg_pieza
+            OR orden = :inc_exacto
+            OR orden ~ :inc_pieza
+        )
+        AND sector NOT LIKE 'Terminado%'
+        AND sector NOT LIKE 'Entrega%'
+        AND sector != 'Dañado'
+        ORDER BY fecha_hora DESC
+        """,
+        params={
+            "exacto": orden_base,
+            "patron_pieza": f"^{re.escape(orden_base)}-[0-9]+$",
+            "urg_exacto": f"[URGENTE] {orden_base}",
+            "urg_pieza": f"^\\[URGENTE\\] {re.escape(orden_base)}-[0-9]+$",
+            "inc_exacto": f"[INCIDENCIA] {orden_base}",
+            "inc_pieza": f"^\\[INCIDENCIA\\] {re.escape(orden_base)}-[0-9]+$"
+        },
         ttl=0
     )
     
