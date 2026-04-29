@@ -1168,10 +1168,14 @@ elif paso == 2:
                     # ── Selección múltiple ─────────────────────────────────────────
                     _sel_pend = {_m: _pzs for _m, _pzs in _visible_e if st.session_state.get(f"chk_pend_{_m}", False)}
                     _n_sel_pend = len(_sel_pend)
+                    _total_piezas_pend = sum(len(piezas) for piezas in _sel_pend.values())
+                    
                     if _n_sel_pend > 0:
-                        st.info(f"☑️ {_n_sel_pend} seleccionada{'s' if _n_sel_pend != 1 else ''}")
-                    if _n_sel_pend >= 2:
-                        if st.button(f"↘️ TOMAR SELECCIONADAS ({_n_sel_pend})", type="primary",
+                        st.info(f"☑️ {_total_piezas_pend} pieza(s) seleccionada(s)")
+                    
+                    # Mostrar botón si hay 2+ checkboxes O 2+ piezas totales
+                    if _n_sel_pend >= 2 or _total_piezas_pend >= 2:
+                        if st.button(f"↘️ TOMAR SELECCIONADAS ({_total_piezas_pend} piezas)", type="primary",
                                      use_container_width=True, key="btn_batch_tomar"):
                             _tomadas_b, _errores_tb = 0, []
                             for _bm, _bpzs in _sel_pend.items():
