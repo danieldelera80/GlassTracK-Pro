@@ -1316,13 +1316,24 @@ elif paso == 2:
                                 f'&#x26A0;&#xFE0F; {_maestro_p} — Falta marcar Cara {_falta_n_p} en sectores anteriores</div>',
                                 unsafe_allow_html=True
                             )
-                    _chk_disabled_p = False
+                    # En DVH: mostrar indicador visual pero NO bloquear (permite despachar piezas viejas)
+                    _tiene_par_dvh = True
                     if st.session_state.sector_confirmado == "DVH":
                         _par_for_chk = _pares_p.get(_maestro_p, {"ambas_en_dvh": False})
-                        _chk_disabled_p = not _par_for_chk.get("ambas_en_dvh", False)
-                    _col_chk_p, _col_card_p = st.columns([0.06, 0.94])
+                        _tiene_par_dvh = _par_for_chk.get("ambas_en_dvh", False)
+                    
+                    _col_chk_p, _col_ind, _col_card_p = st.columns([0.06, 0.04, 0.90]) if st.session_state.sector_confirmado == "DVH" else (st.columns([0.06, 0.94]) + (None,))
+                    
                     with _col_chk_p:
-                        st.checkbox("", key=f"chk_proc_{_maestro_p}", disabled=_chk_disabled_p, label_visibility="collapsed")
+                        st.checkbox("", key=f"chk_proc_{_maestro_p}", label_visibility="collapsed")
+                    
+                    # Indicador visual SOLO en DVH
+                    if st.session_state.sector_confirmado == "DVH" and _col_ind is not None:
+                        with _col_ind:
+                            if _tiene_par_dvh:
+                                st.markdown('<div style="font-size:18px;text-align:center;padding-top:8px;" title="Tiene su par">🟢</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown('<div style="font-size:18px;text-align:center;padding-top:8px;" title="Falta el par">🟡</div>', unsafe_allow_html=True)
                     with _col_card_p:
                         if len(_piezas_p) > 1:
                             _carro_g = _piezas_p[0].get('carro', '')
