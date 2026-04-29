@@ -710,7 +710,8 @@ with tab_prod:
             mask = (
                 df_vista["Orden"].astype(str).str.lower().str.contains(busq, regex=False, na=False) |
                 df_vista["Sector"].astype(str).str.lower().str.contains(busq, regex=False, na=False) |
-                df_vista["Operario"].astype(str).str.lower().str.contains(busq, regex=False, na=False)
+                df_vista["Operario"].astype(str).str.lower().str.contains(busq, regex=False, na=False) |
+                df_vista["Carro"].astype(str).str.lower().str.contains(busq, regex=False, na=False)
             )
             df_vista = df_vista[mask]
             if df_vista.empty:

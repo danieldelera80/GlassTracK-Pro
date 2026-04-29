@@ -905,8 +905,8 @@ elif paso == 2:
                 f"📥 PENDIENTES DE RECIBIR  ·  {len(entrantes)} orden{'es' if len(entrantes) != 1 else ''}",
                 expanded=len(entrantes) > 0
             ):
-                _buscar_ent = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_entrantes")
-                _entrantes_fil = [r for r in entrantes if _buscar_ent.strip().lower() in str(r['orden']).lower()] if _buscar_ent.strip() else entrantes
+                _buscar_ent = st.text_input("", placeholder="🔍 Buscar orden o carro...", key="buscar_entrantes")
+                _entrantes_fil = [r for r in entrantes if _buscar_ent.strip().lower() in str(r['orden']).lower() or _buscar_ent.strip().lower() in str(r.get('carro', '')).lower() or _buscar_ent.strip().lower() == str(r.get('lado', '')).lower()] if _buscar_ent.strip() else entrantes
                 if not entrantes:
                     st.info("No hay órdenes entrantes en este momento.")
                 elif not _entrantes_fil:
@@ -1058,8 +1058,8 @@ elif paso == 2:
             f"⚙️ EN PROCESO EN MI MESA  ·  {len(en_proceso)} pieza{'s' if len(en_proceso) != 1 else ''}",
             expanded=len(en_proceso) > 0
         ):
-            _buscar_proc = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_en_proceso")
-            _en_proceso_fil = [r for r in en_proceso if _buscar_proc.strip().lower() in str(r['orden']).lower()] if _buscar_proc.strip() else en_proceso
+            _buscar_proc = st.text_input("", placeholder="🔍 Buscar orden o carro...", key="buscar_en_proceso")
+            _en_proceso_fil = [r for r in en_proceso if _buscar_proc.strip().lower() in str(r['orden']).lower() or _buscar_proc.strip().lower() in str(r.get('carro', '')).lower() or _buscar_proc.strip().lower() == str(r.get('lado', '')).lower()] if _buscar_proc.strip() else en_proceso
             if not en_proceso:
                 st.info("No tenés piezas en tu mesa actualmente.")
             elif not _en_proceso_fil:
@@ -1268,8 +1268,8 @@ elif paso == 2:
             f"📥 LISTAS PARA ENTREGAR  ·  {len(pendientes)} orden{'es' if len(pendientes) != 1 else ''}",
             expanded=len(pendientes) > 0
         ):
-            _buscar_pend = st.text_input("", placeholder="🔍 Buscar orden...", key="buscar_entrega")
-            _pendientes_fil = [r for r in pendientes if _buscar_pend.strip().lower() in str(r['orden']).lower()] if _buscar_pend.strip() else pendientes
+            _buscar_pend = st.text_input("", placeholder="🔍 Buscar orden o carro...", key="buscar_entrega")
+            _pendientes_fil = [r for r in pendientes if _buscar_pend.strip().lower() in str(r['orden']).lower() or _buscar_pend.strip().lower() in str(r.get('carro', '')).lower() or _buscar_pend.strip().lower() == str(r.get('lado', '')).lower()] if _buscar_pend.strip() else pendientes
             if not pendientes:
                 st.info("No hay productos terminados esperando entrega.")
             elif not _pendientes_fil:
