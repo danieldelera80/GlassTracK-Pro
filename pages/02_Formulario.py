@@ -348,6 +348,8 @@ _DEFAULTS = {
     "mostrar_advertencia_duplicado": False,
     "orden_duplicada":               None,
     "modal_modo": None,
+    "orden_nueva_trigger": None,
+    "orden_existe_trigger": None,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -391,7 +393,7 @@ def procesar_orden(valor):
     # Normalizar búsqueda (ignorar prefijos)
     orden_normalizada = _PFX_RE.sub("", orden_buscada).strip()
     
-    # Buscar en PENDIENTES
+    # Buscar en PENDIENTES del sector actual
     orden_en_pendientes = None
     for ord_pend in entrantes:
         ord_norm_pend = _PFX_RE.sub("", ord_pend['orden']).strip()
@@ -399,7 +401,7 @@ def procesar_orden(valor):
             orden_en_pendientes = ord_pend
             break
     
-    # Buscar en EN PROCESO
+    # Buscar en EN PROCESO del sector actual
     orden_en_proceso = None
     for ord_proc in en_proceso:
         ord_norm_proc = _PFX_RE.sub("", ord_proc['orden']).strip()
@@ -407,7 +409,7 @@ def procesar_orden(valor):
             orden_en_proceso = ord_proc
             break
     
-    # Si existe en el sector actual → ir al paso correcto
+    # Si existe EXACTAMENTE en el sector actual → ir al paso correcto (TOMAR/DESPACHAR)
     if sector_actual in ["Corte", "Corte Laminado"]:
         if orden_en_proceso or orden_en_pendientes:
             orden_encontrada = orden_en_proceso or orden_en_pendientes
@@ -433,38 +435,55 @@ def procesar_orden(valor):
             st.session_state.paso = 3
             return
     
-    # ═══════════════════════════════════════════════════════════════
-    # VERIFICACIÓN 1: ¿Existe en OTRO SECTOR? (anti-duplicados)
-    # ═══════════════════════════════════════════════════════════════
-    verificacion = verificar_orden_en_otro_sector(orden_buscada, sector_actual)
+    # Verificar si la ORDEN BASE existe en cualquier sector (incluido el actual)
+    import re
+    match = re.match(r'^(.+?)(?:-(\d+))?$', orden_normalizada)
+    orden_base = match.group(1) if match else orden_normalizada
     
-    if verificacion["existe"]:
-        st.session_state.orden_duplicada = {
-            "orden_original": verificacion["orden"],
-            "sector_origen": verificacion["sector"],
+    df_existencias = conn.query(
+        "SELECT orden, sector FROM registros "
+        "WHERE TRIM(orden) LIKE :base_pattern "
+        "AND sector != 'Consolidada en DVH' "
+        "ORDER BY fecha_hora DESC",
+        params={"base_pattern": f"{orden_base}%"},
+        ttl=0
+    )
+    
+    if not df_existencias.empty:
+        # ═══════════════════════════════════════════════════════════════
+        # ORDEN EXISTE → mostrar opciones (agregar piezas o traer)
+        # ═══════════════════════════════════════════════════════════════
+        # Calcular último número de pieza
+        ultimo_numero = 0
+        for ord_str in df_existencias["orden"].unique():
+            ord_clean = _PFX_RE.sub("", ord_str).strip()
+            match_num = re.match(rf'^{re.escape(orden_base)}-(\d+)$', ord_clean)
+            if match_num:
+                num = int(match_num.group(1))
+                if num > ultimo_numero:
+                    ultimo_numero = num
+        
+        # Determinar sector más reciente
+        sector_origen = df_existencias.iloc[0]["sector"].strip()
+        orden_ejemplo = df_existencias.iloc[0]["orden"]
+        
+        st.session_state.orden_existe_trigger = {
+            "orden_base": orden_base,
+            "orden_ejemplo": orden_ejemplo,
+            "sector_origen": sector_origen,
+            "ultimo_numero": ultimo_numero,
+            "total_piezas": len(df_existencias["orden"].unique()),
             "orden_escaneada": orden_buscada
         }
-        st.session_state.mostrar_advertencia_duplicado = True
         return
     
-
-    
     # ═══════════════════════════════════════════════════════════════
-    # ORDEN NUEVA: Proceder normalmente
+    # ORDEN NUEVA → preguntar cuántas piezas tiene
     # ═══════════════════════════════════════════════════════════════
-    orden_resuelta = resolver_nombre_orden(orden_buscada)
-    st.session_state.orden_val = orden_resuelta
-    carro_p, lado_p = obtener_carro_lado(orden_resuelta)
-    st.session_state.carro_previo = carro_p
-    st.session_state.lado_previo = lado_p
-    st.session_state.paso3_fresh = True
-    
-    if sector_actual in SECTORES_ESCANEO_DIRECTO:
-        st.session_state.entrega_lista = True
-    elif sector_actual in ["Corte", "Corte Laminado"]:
-        st.session_state.paso = 4
-    else:
-        st.session_state.paso = 3
+    st.session_state.orden_nueva_trigger = {
+        "orden_base": orden_base,
+        "orden_escaneada": orden_buscada
+    }
 
 
 def cb_orden():
@@ -688,55 +707,139 @@ elif paso == 2:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── MODAL UNIFICADO: ORDEN EXISTENTE ─────────────────────────────────────
-    if st.session_state.get("mostrar_advertencia_duplicado", False):
-        _dup = st.session_state.orden_duplicada
-        _ultimo_num = _dup.get("ultimo_numero", 0)
-        _orden_base = _dup.get("orden_base", _dup['orden_escaneada'])
-        _total_existentes = _dup.get("total_piezas", 1)
+    # ════════════════════════════════════════════════════════════════════
+    # MODAL: ORDEN NUEVA (preguntar cuántas piezas tiene)
+    # ════════════════════════════════════════════════════════════════════
+    if st.session_state.get("orden_nueva_trigger"):
+        _on = st.session_state.orden_nueva_trigger
         
         st.markdown(f"""
-        <div style="background:#7f1d1d;border:2px solid #dc2626;border-radius:12px;
+        <div style="background:#0d2a1a;border:2px solid #1a6a35;border-radius:12px;
                     padding:16px;margin-bottom:20px;">
-            <div style="font-size:24px;text-align:center;margin-bottom:8px;">⚠️</div>
-            <div style="font-size:16px;font-weight:700;color:#fca5a5;text-align:center;margin-bottom:12px;">
-                ORDEN YA EXISTE
+            <div style="font-size:24px;text-align:center;margin-bottom:8px;">📦</div>
+            <div style="font-size:16px;font-weight:700;color:#4ada75;text-align:center;margin-bottom:12px;">
+                NUEVA ORDEN
             </div>
-            <div style="font-size:14px;color:#fecaca;text-align:center;margin-bottom:8px;">
-                La orden <b>{_orden_base}</b> ya tiene <b>{_total_existentes}</b> pieza(s)<br>
-                Última en: <b>{_dup['sector_origen']}</b>
-            </div>
-            <div style="font-size:13px;color:#fed7aa;text-align:center;margin-top:12px;">
-                ¿Qué querés hacer?
+            <div style="font-size:14px;color:#a7f3d0;text-align:center;line-height:1.6;">
+                Orden: <b>{_on['orden_escaneada']}</b><br>
+                ¿Cuántas piezas tiene esta orden?
             </div>
         </div>
         """, unsafe_allow_html=True)
+        
+        col_cant, col_dest = st.columns(2)
+        with col_cant:
+            cantidad_total = st.number_input(
+                "Cantidad de piezas",
+                min_value=1, max_value=200, value=1, step=1,
+                key="modal_nueva_cantidad"
+            )
+            
+            if cantidad_total == 1:
+                st.info(f"Se creará: **{_on['orden_base']}-1**")
+            else:
+                st.info(f"Se crearán: **{_on['orden_base']}-1** hasta **{_on['orden_base']}-{cantidad_total}**")
+        
+        with col_dest:
+            from config import SECTORES
+            if st.session_state.sector_confirmado == "Optimización":
+                destino_nueva = st.selectbox(
+                    "Destino",
+                    options=[s for s in SECTORES if s != "Optimización"],
+                    key="modal_nueva_destino"
+                )
+            else:
+                destino_nueva = st.session_state.sector_confirmado
+                st.info(f"📍 Destino: **{destino_nueva}**")
+        
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("← Cancelar", use_container_width=True, key="btn_cancel_nueva"):
+                st.session_state.orden_nueva_trigger = None
+                st.rerun()
+        
+        with col_btn2:
+            if st.button(f"✅ CARGAR {cantidad_total} pieza(s)", use_container_width=True, type="primary", key="btn_cargar_nueva"):
+                creadas = 0
+                errores = []
+                
+                for i in range(1, cantidad_total + 1):
+                    orden_pieza = f"{_on['orden_base']}-{i}"
+                    
+                    if destino_nueva in ["Corte", "Corte Laminado"]:
+                        estado = f"En Proceso en {destino_nueva}"
+                    else:
+                        estado = f"Enviado a {destino_nueva}"
+                    
+                    ok, err = guardar_registro(
+                        orden_pieza, 0, "A",
+                        st.session_state.op_confirmado,
+                        estado
+                    )
+                    
+                    if ok:
+                        creadas += 1
+                        agregar_historial(orden_pieza, estado)
+                    else:
+                        errores.append(f"{orden_pieza}: {err}")
+                
+                st.session_state.orden_nueva_trigger = None
+                
+                if errores:
+                    st.warning(f"✅ {creadas} creadas. ⚠️ {len(errores)} errores")
+                else:
+                    st.success(f"✅ {creadas} pieza(s) cargada(s) en {destino_nueva}!")
+                
+                st.session_state.ord_n += creadas
+                import time
+                time.sleep(1.5)
+                st.rerun()
+        
+        st.stop()
 
-        # Inicializar estado del sub-modo
+    # ════════════════════════════════════════════════════════════════════
+    # MODAL: ORDEN YA EXISTE (agregar piezas / traer / cancelar)
+    # ════════════════════════════════════════════════════════════════════
+    if st.session_state.get("orden_existe_trigger"):
+        _oe = st.session_state.orden_existe_trigger
+        
         if "modal_modo" not in st.session_state:
             st.session_state.modal_modo = None
-
-        # Si NO se eligió modo aún, mostrar los 2 botones principales
+        
+        st.markdown(f"""
+        <div style="background:#1e3a8a;border:2px solid #3b82f6;border-radius:12px;
+                    padding:16px;margin-bottom:20px;">
+            <div style="font-size:24px;text-align:center;margin-bottom:8px;">📋</div>
+            <div style="font-size:16px;font-weight:700;color:#93c5fd;text-align:center;margin-bottom:12px;">
+                ORDEN YA EXISTE
+            </div>
+            <div style="font-size:14px;color:#bfdbfe;text-align:center;line-height:1.6;">
+                Orden <b>{_oe['orden_base']}</b> ya tiene <b>{_oe['total_piezas']} pieza(s)</b><br>
+                Última en: <b>{_oe['sector_origen']}</b>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Si NO se eligió modo aún, mostrar opciones principales
         if st.session_state.modal_modo is None:
             col_a, col_b = st.columns(2)
             with col_a:
-                if st.button("➡️ ES LA MISMA\n(traer a mi sector)", use_container_width=True, type="primary"):
-                    carro_p, lado_p = obtener_carro_lado(_dup['orden_original'])
+                if st.button("➡️ TRAER A MI SECTOR\n(es la misma)", use_container_width=True, type="primary", key="btn_traer"):
+                    carro_p, lado_p = obtener_carro_lado(_oe['orden_ejemplo'])
                     ok, err = guardar_registro(
-                        _dup['orden_original'], carro_p, lado_p or "A",
+                        _oe['orden_ejemplo'], carro_p, lado_p or "A",
                         st.session_state.op_confirmado,
                         f"En Proceso en {st.session_state.sector_confirmado}"
                     )
                     if ok:
-                        agregar_historial(_dup['orden_original'], f"En Proceso en {st.session_state.sector_confirmado}")
+                        agregar_historial(_oe['orden_ejemplo'], f"En Proceso en {st.session_state.sector_confirmado}")
                         st.session_state.ultimo = {
-                            "orden": _dup['orden_original'],
+                            "orden": _oe['orden_ejemplo'],
                             "sector": st.session_state.sector_confirmado,
                             "op": st.session_state.op_confirmado,
                             "offline": err == "OFFLINE"
                         }
-                        st.session_state.mostrar_advertencia_duplicado = False
-                        st.session_state.orden_duplicada = None
+                        st.session_state.orden_existe_trigger = None
                         st.session_state.modal_modo = None
                         st.session_state.ord_n += 1
                         st.rerun()
@@ -744,67 +847,71 @@ elif paso == 2:
                         st.error(f"❌ Error: {err}")
             
             with col_b:
-                if st.button("🔁 ES OTRA PIEZA\n(cargar nuevas)", use_container_width=True, type="secondary"):
-                    st.session_state.modal_modo = "cargar_nuevas"
+                if st.button("➕ AGREGAR PIEZAS\n(es otra pieza)", use_container_width=True, type="secondary", key="btn_agregar"):
+                    st.session_state.modal_modo = "agregar"
                     st.rerun()
             
             st.write("")
-            if st.button("← Cancelar", use_container_width=True):
-                st.session_state.mostrar_advertencia_duplicado = False
-                st.session_state.orden_duplicada = None
+            if st.button("← Cancelar", use_container_width=True, key="btn_cancel_existe"):
+                st.session_state.orden_existe_trigger = None
                 st.session_state.modal_modo = None
                 st.rerun()
         
-        # Si eligió "ES OTRA PIEZA", mostrar input de cantidad
-        elif st.session_state.modal_modo == "cargar_nuevas":
+        # Modo "agregar" piezas
+        elif st.session_state.modal_modo == "agregar":
             st.markdown(f"""
-            <div style="background:#1e3a8a;border:2px solid #3b82f6;border-radius:12px;
-                        padding:16px;margin-bottom:16px;">
-                <div style="font-size:14px;color:#bfdbfe;text-align:center;">
-                    Próxima pieza será: <b>{_orden_base}-{_ultimo_num + 1}</b>
-                </div>
+            <div style="background:#0d2a1a;border:1px solid #1a6a35;border-radius:8px;
+                        padding:12px;margin-bottom:12px;font-size:13px;color:#a7f3d0;text-align:center;">
+                Próxima pieza será: <b>{_oe['orden_base']}-{_oe['ultimo_numero'] + 1}</b>
             </div>
             """, unsafe_allow_html=True)
             
             col_cant, col_dest = st.columns(2)
             with col_cant:
-                cantidad_nuevas = st.number_input(
-                    "¿Cuántas piezas nuevas?",
+                cantidad_agregar = st.number_input(
+                    "¿Cuántas piezas agregar?",
                     min_value=1, max_value=100, value=1, step=1,
-                    key="modal_cantidad"
+                    key="modal_agregar_cantidad"
                 )
+                
+                _desde = _oe['ultimo_numero'] + 1
+                _hasta = _oe['ultimo_numero'] + cantidad_agregar
+                if cantidad_agregar == 1:
+                    st.info(f"Se creará: **{_oe['orden_base']}-{_desde}**")
+                else:
+                    st.info(f"Se crearán: **{_oe['orden_base']}-{_desde}** hasta **{_oe['orden_base']}-{_hasta}**")
             
             with col_dest:
                 from config import SECTORES
                 if st.session_state.sector_confirmado == "Optimización":
-                    destino_nuevas = st.selectbox(
+                    destino_agregar = st.selectbox(
                         "Destino",
                         options=[s for s in SECTORES if s != "Optimización"],
-                        key="modal_destino"
+                        key="modal_agregar_destino"
                     )
                 else:
-                    destino_nuevas = st.session_state.sector_confirmado
-                    st.info(f"📍 Destino: {destino_nuevas}")
+                    destino_agregar = st.session_state.sector_confirmado
+                    st.info(f"📍 Destino: **{destino_agregar}**")
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                if st.button("← Volver", use_container_width=True):
+                if st.button("← Volver", use_container_width=True, key="btn_volver_agregar"):
                     st.session_state.modal_modo = None
                     st.rerun()
             
             with col_btn2:
-                if st.button("✅ CARGAR", use_container_width=True, type="primary"):
+                if st.button(f"✅ AGREGAR {cantidad_agregar} pieza(s)", use_container_width=True, type="primary", key="btn_confirmar_agregar"):
                     creadas = 0
                     errores = []
                     
-                    for i in range(1, cantidad_nuevas + 1):
-                        nuevo_num = _ultimo_num + i
-                        orden_nueva = f"{_orden_base}-{nuevo_num}"
+                    for i in range(1, cantidad_agregar + 1):
+                        nuevo_num = _oe['ultimo_numero'] + i
+                        orden_nueva = f"{_oe['orden_base']}-{nuevo_num}"
                         
-                        if destino_nuevas in ["Corte", "Corte Laminado"]:
-                            estado = f"En Proceso en {destino_nuevas}"
+                        if destino_agregar in ["Corte", "Corte Laminado"]:
+                            estado = f"En Proceso en {destino_agregar}"
                         else:
-                            estado = f"Enviado a {destino_nuevas}"
+                            estado = f"Enviado a {destino_agregar}"
                         
                         ok, err = guardar_registro(
                             orden_nueva, 0, "A",
@@ -818,20 +925,19 @@ elif paso == 2:
                         else:
                             errores.append(f"{orden_nueva}: {err}")
                     
-                    st.session_state.mostrar_advertencia_duplicado = False
-                    st.session_state.orden_duplicada = None
+                    st.session_state.orden_existe_trigger = None
                     st.session_state.modal_modo = None
                     
                     if errores:
                         st.warning(f"✅ {creadas} creadas. ⚠️ {len(errores)} errores")
                     else:
-                        st.success(f"✅ {creadas} pieza(s) cargada(s) en {destino_nuevas}!")
+                        st.success(f"✅ {creadas} pieza(s) agregada(s) en {destino_agregar}!")
                     
                     st.session_state.ord_n += creadas
                     import time
                     time.sleep(1.5)
                     st.rerun()
-
+        
         st.stop()
 
     # ── Auto-guardar Entrega / Terminado ──────────────────────────────────────
