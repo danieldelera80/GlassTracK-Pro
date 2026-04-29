@@ -1322,13 +1322,18 @@ elif paso == 2:
                         _par_for_chk = _pares_p.get(_maestro_p, {"ambas_en_dvh": False})
                         _tiene_par_dvh = _par_for_chk.get("ambas_en_dvh", False)
                     
-                    _col_chk_p, _col_ind, _col_card_p = st.columns([0.06, 0.04, 0.90]) if st.session_state.sector_confirmado == "DVH" else (st.columns([0.06, 0.94]) + (None,))
+                    # Estructura de columnas según sector
+                    if st.session_state.sector_confirmado == "DVH":
+                        _col_chk_p, _col_ind, _col_card_p = st.columns([0.06, 0.04, 0.90])
+                    else:
+                        _col_chk_p, _col_card_p = st.columns([0.06, 0.94])
+                        _col_ind = None
                     
                     with _col_chk_p:
                         st.checkbox("", key=f"chk_proc_{_maestro_p}", label_visibility="collapsed")
                     
                     # Indicador visual SOLO en DVH
-                    if st.session_state.sector_confirmado == "DVH" and _col_ind is not None:
+                    if _col_ind is not None:
                         with _col_ind:
                             if _tiene_par_dvh:
                                 st.markdown('<div style="font-size:18px;text-align:center;padding-top:8px;" title="Tiene su par">🟢</div>', unsafe_allow_html=True)
