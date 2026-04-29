@@ -1,6 +1,5 @@
 import re
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import text
@@ -391,6 +390,76 @@ def cb_orden():
     procesar_orden(val)
 
 
+def render_numpad(current_value=""):
+    """Teclado numérico para tablets - retorna el valor ingresado."""
+
+    with st.expander("📱 Teclado Numérico", expanded=False):
+        st.markdown(f"""
+        <div style="background:#1e293b;border:2px solid #3b82f6;border-radius:8px;
+                    padding:12px;margin-bottom:12px;text-align:center;">
+            <span style="font-size:26px;font-weight:800;color:#60a5fa;letter-spacing:2px;">
+                {current_value or '---'}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="numpad-btn">', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            b7 = st.button("7", key="np_7", use_container_width=True)
+        with col2:
+            b8 = st.button("8", key="np_8", use_container_width=True)
+        with col3:
+            b9 = st.button("9", key="np_9", use_container_width=True)
+
+        with col1:
+            b4 = st.button("4", key="np_4", use_container_width=True)
+        with col2:
+            b5 = st.button("5", key="np_5", use_container_width=True)
+        with col3:
+            b6 = st.button("6", key="np_6", use_container_width=True)
+
+        with col1:
+            b1 = st.button("1", key="np_1", use_container_width=True)
+        with col2:
+            b2 = st.button("2", key="np_2", use_container_width=True)
+        with col3:
+            b3 = st.button("3", key="np_3", use_container_width=True)
+
+        with col1:
+            bdel = st.button("⌫", key="np_del", use_container_width=True, type="secondary")
+        with col2:
+            b0 = st.button("0", key="np_0", use_container_width=True)
+        with col3:
+            bdash = st.button("-", key="np_dash", use_container_width=True, type="secondary")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        col_c, col_ok = st.columns(2)
+        with col_c:
+            bclear = st.button("🗑️ LIMPIAR", key="np_clear", use_container_width=True, type="secondary")
+        with col_ok:
+            bok = st.button("✅ BUSCAR", key="np_ok", use_container_width=True, type="primary")
+
+        if b7: return current_value + "7"
+        if b8: return current_value + "8"
+        if b9: return current_value + "9"
+        if b4: return current_value + "4"
+        if b5: return current_value + "5"
+        if b6: return current_value + "6"
+        if b1: return current_value + "1"
+        if b2: return current_value + "2"
+        if b3: return current_value + "3"
+        if b0: return current_value + "0"
+        if bdash: return current_value + "-"
+        if bdel: return current_value[:-1] if current_value else ""
+        if bclear: return ""
+        if bok and current_value: return f"SEARCH:{current_value}"
+
+    return current_value
+
+
 def agregar_historial(orden, sector, enviado_a=None):
     entry = {
         "orden":     orden,
@@ -686,138 +755,20 @@ elif paso == 2:
             st.session_state.ord_n += 1
             st.rerun()
 
-    # Teclado numérico con altura dinámica
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body { margin: 0; padding: 0; font-family: sans-serif; }
-            details { margin: 0; }
-            summary {
-                cursor: pointer; padding: 12px; background: #f8fafc;
-                border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px;
-                font-size: 14px; font-weight: 500; list-style: none;
-                display: flex; justify-content: space-between; align-items: center;
-            }
-            .numpad-content {
-                padding: 16px; background: #ffffff;
-                border: 0.5px solid rgba(0,0,0,0.15);
-                border-radius: 8px; margin-top: 4px;
-            }
-            #numpad-display {
-                background: #1e293b; border: 2px solid #3b82f6;
-                border-radius: 8px; padding: 12px; margin-bottom: 12px;
-                text-align: center; min-height: 50px;
-                display: flex; align-items: center; justify-content: center;
-            }
-            .numpad-grid {
-                display: grid; grid-template-columns: repeat(3, 1fr);
-                gap: 8px; margin-bottom: 12px;
-            }
-            button {
-                min-height: 58px; font-size: 28px; font-weight: 900;
-                background: #f8fafc; border: 1px solid #cbd5e1;
-                border-radius: 6px; cursor: pointer;
-                transition: all 0.15s;
-            }
-            button:hover { background: #e2e8f0; transform: scale(1.02); }
-            button:active { transform: scale(0.98); }
-            .btn-secondary { background: #e2e8f0; font-size: 24px; }
-            .btn-primary {
-                background: #3b82f6; color: white;
-                font-size: 15px; padding: 14px;
-            }
-            .btn-primary:hover { background: #2563eb; }
-            .controls {
-                display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-            }
-        </style>
-    </head>
-    <body>
-        <details id="numpad" onToggle="resizeFrame()">
-            <summary>
-                📱 Teclado Numérico
-                <span style="color: #64748b; font-size: 12px;">▼</span>
-            </summary>
+    # Teclado numérico para tablets
+    if "numpad_value" not in st.session_state:
+        st.session_state.numpad_value = ""
 
-            <div class="numpad-content">
-                <div id="numpad-display">
-                    <span style="font-size: 32px; font-weight: 900; color: #60a5fa; letter-spacing: 3px;">---</span>
-                </div>
+    resultado_numpad = render_numpad(st.session_state.numpad_value)
 
-                <div class="numpad-grid">
-                    <button onclick="add('7')">7</button>
-                    <button onclick="add('8')">8</button>
-                    <button onclick="add('9')">9</button>
-                    <button onclick="add('4')">4</button>
-                    <button onclick="add('5')">5</button>
-                    <button onclick="add('6')">6</button>
-                    <button onclick="add('1')">1</button>
-                    <button onclick="add('2')">2</button>
-                    <button onclick="add('3')">3</button>
-                    <button onclick="back()" class="btn-secondary">⌫</button>
-                    <button onclick="add('0')">0</button>
-                    <button onclick="add('-')" class="btn-secondary">-</button>
-                </div>
-
-                <div class="controls">
-                    <button onclick="clearVal()" class="btn-secondary">🗑️ LIMPIAR</button>
-                    <button onclick="search()" class="btn-primary">✅ BUSCAR</button>
-                </div>
-            </div>
-        </details>
-
-        <script>
-            let value = '';
-
-            function add(digit) {
-                value += digit;
-                update();
-            }
-
-            function back() {
-                value = value.slice(0, -1);
-                update();
-            }
-
-            function clearVal() {
-                value = '';
-                update();
-            }
-
-            function update() {
-                document.getElementById('numpad-display').innerHTML =
-                    '<span style="font-size: 32px; font-weight: 900; color: #60a5fa; letter-spacing: 3px;">'
-                    + (value || '---') + '</span>';
-            }
-
-            function search() {
-                if (value) {
-                    const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-                    for (let input of inputs) {
-                        if (input.placeholder && input.placeholder.includes('Escanear')) {
-                            input.value = value;
-                            input.dispatchEvent(new Event('input', { bubbles: true }));
-                            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-                            clearVal();
-                            break;
-                        }
-                    }
-                }
-            }
-
-            function resizeFrame() {
-                const details = document.getElementById('numpad');
-                const height = details.open ? 520 : 50;
-                window.parent.postMessage({ type: 'setFrameHeight', height: height }, '*');
-            }
-
-            setTimeout(resizeFrame, 100);
-        </script>
-    </body>
-    </html>
-    """, height=520, scrolling=False)
+    if resultado_numpad.startswith("SEARCH:"):
+        orden_buscar = resultado_numpad.replace("SEARCH:", "")
+        procesar_orden(orden_buscar)
+        st.session_state.numpad_value = ""
+        st.rerun()
+    elif resultado_numpad != st.session_state.numpad_value:
+        st.session_state.numpad_value = resultado_numpad
+        st.rerun()
 
     st.write("")
     if st.button("← Cambiar sector", use_container_width=True):
