@@ -221,6 +221,31 @@ def resolver_nombre_orden(orden_base):
         return orden_base
 
 
+def verificar_orden_en_otro_sector(orden_base, sector_actual):
+    """Verifica si la orden existe en otro sector (no en el actual)."""
+    try:
+        base = _PFX_RE.sub("", orden_base).strip()
+        df = conn.query(
+            "SELECT orden, sector FROM registros "
+            "WHERE (TRIM(orden) = :base OR TRIM(orden) ILIKE :urg OR TRIM(orden) ILIKE :inc) "
+            "  AND sector != 'Consolidada en DVH' "
+            "ORDER BY fecha_hora DESC LIMIT 1",
+            params={"base": base, "urg": f"[URGENTE] {base}", "inc": f"[INCIDENCIA] {base}"},
+            ttl=0
+        )
+        if not df.empty:
+            orden_encontrada = df.iloc[0]["orden"]
+            sector_encontrado = df.iloc[0]["sector"].strip()
+            if sector_encontrado != f"En Proceso en {sector_actual}" and \
+               sector_encontrado != f"Enviado a {sector_actual}" and \
+               sector_encontrado != sector_actual:
+                return {"existe": True, "orden": orden_encontrada, "sector": sector_encontrado}
+        return {"existe": False}
+    except Exception as e:
+        print(f"Error verificar_orden_en_otro_sector: {e}")
+        return {"existe": False}
+
+
 def obtener_carro_lado(orden):
     try:
         base = _PFX_RE.sub("", orden).strip()
@@ -285,7 +310,9 @@ _DEFAULTS = {
     "lado_previo":       "A",
     "paso3_fresh":       False,
     "historial":         [],   # últimos 3 escaneos de la sesión
-    "batch_desp_show":   False,
+    "batch_desp_show":              False,
+    "mostrar_advertencia_duplicado": False,
+    "orden_duplicada":               None,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -319,16 +346,30 @@ def confirmar_sector(sector):
 def procesar_orden(valor):
     if not valor.strip():
         return
-    orden_resuelta                    = resolver_nombre_orden(valor.strip())
-    st.session_state.orden_val        = orden_resuelta
-    carro_p, lado_p                   = obtener_carro_lado(orden_resuelta)
-    st.session_state.carro_previo     = carro_p
-    st.session_state.lado_previo      = lado_p
-    st.session_state.paso3_fresh      = True
+
+    # Verificar si existe en otro sector
+    sector_actual = st.session_state.sector_confirmado
+    verificacion = verificar_orden_en_otro_sector(valor.strip(), sector_actual)
+
+    if verificacion["existe"]:
+        st.session_state.orden_duplicada = {
+            "orden_original":  verificacion["orden"],
+            "sector_origen":   verificacion["sector"],
+            "orden_escaneada": valor.strip()
+        }
+        st.session_state.mostrar_advertencia_duplicado = True
+        return
+
+    # Si no existe en otro sector, proceder normal
+    orden_resuelta = resolver_nombre_orden(valor.strip())
+    st.session_state.orden_val = orden_resuelta
+    carro_p, lado_p = obtener_carro_lado(orden_resuelta)
+    st.session_state.carro_previo = carro_p
+    st.session_state.lado_previo = lado_p
+    st.session_state.paso3_fresh = True
     if st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRECTO:
         st.session_state.entrega_lista = True
     elif st.session_state.sector_confirmado in ["Corte", "Corte Laminado"]:
-        # En Corte y Corte Laminado, ir directo a DESPACHAR (paso 4)
         st.session_state.paso = 4
     else:
         st.session_state.paso = 3
@@ -484,6 +525,76 @@ elif paso == 2:
              onclick="window.location.href='?'">cambiar</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── ADVERTENCIA DE DUPLICADO ─────────────────────────────────────────────
+    if st.session_state.get("mostrar_advertencia_duplicado", False):
+        _dup = st.session_state.orden_duplicada
+        st.markdown(f"""
+        <div style="background:#7f1d1d;border:2px solid #dc2626;border-radius:12px;
+                    padding:16px;margin-bottom:20px;">
+            <div style="font-size:24px;text-align:center;margin-bottom:8px;">⚠️</div>
+            <div style="font-size:16px;font-weight:700;color:#fca5a5;text-align:center;margin-bottom:12px;">
+                ORDEN YA EXISTE
+            </div>
+            <div style="font-size:14px;color:#fecaca;text-align:center;margin-bottom:16px;">
+                La orden <b>{_dup['orden_original']}</b> ya está en:<br>
+                <b>{_dup['sector_origen']}</b>
+            </div>
+            <div style="font-size:13px;color:#fed7aa;text-align:center;margin-bottom:16px;">
+                ¿Qué querés hacer?
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("🔁 ES OTRA PIEZA\n(crear nueva)", use_container_width=True, type="secondary"):
+                orden_resuelta = resolver_nombre_orden(_dup['orden_escaneada'])
+                st.session_state.orden_val = orden_resuelta
+                carro_p, lado_p = obtener_carro_lado(orden_resuelta)
+                st.session_state.carro_previo = carro_p
+                st.session_state.lado_previo = lado_p
+                st.session_state.paso3_fresh = True
+                st.session_state.mostrar_advertencia_duplicado = False
+                st.session_state.orden_duplicada = None
+                if st.session_state.sector_confirmado in SECTORES_ESCANEO_DIRECTO:
+                    st.session_state.entrega_lista = True
+                elif st.session_state.sector_confirmado in ["Corte", "Corte Laminado"]:
+                    st.session_state.paso = 4
+                else:
+                    st.session_state.paso = 3
+                st.rerun()
+
+        with col_b:
+            if st.button("➡️ ES LA MISMA\n(traer a mi sector)", use_container_width=True, type="primary"):
+                carro_p, lado_p = obtener_carro_lado(_dup['orden_original'])
+                ok, err = guardar_registro(
+                    _dup['orden_original'], carro_p, lado_p or "A",
+                    st.session_state.op_confirmado,
+                    f"En Proceso en {st.session_state.sector_confirmado}"
+                )
+                if ok:
+                    agregar_historial(_dup['orden_original'], f"En Proceso en {st.session_state.sector_confirmado}")
+                    st.session_state.ultimo = {
+                        "orden":   _dup['orden_original'],
+                        "sector":  st.session_state.sector_confirmado,
+                        "op":      st.session_state.op_confirmado,
+                        "offline": err == "OFFLINE"
+                    }
+                    st.session_state.mostrar_advertencia_duplicado = False
+                    st.session_state.orden_duplicada = None
+                    st.session_state.ord_n += 1
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error: {err}")
+
+        st.write("")
+        if st.button("← Cancelar", use_container_width=True):
+            st.session_state.mostrar_advertencia_duplicado = False
+            st.session_state.orden_duplicada = None
+            st.rerun()
+
+        st.stop()
 
     # ── Auto-guardar Entrega / Terminado ──────────────────────────────────────
     if st.session_state.entrega_lista:
