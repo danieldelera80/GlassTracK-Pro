@@ -415,6 +415,29 @@ def procesar_orden(valor):
             st.session_state.paso = 3
             return
 
+    # SOLO EN OPTIMIZACIÓN: Detectar si es una sub-pieza de orden existente
+    if sector_actual == "Optimización":
+        # Extraer orden base (ej: 66045-1 → 66045)
+        import re
+        match = re.match(r'^([A-Z\d\-]+?)(?:-(\d+))?$', orden_buscada)
+        if match:
+            orden_base = match.group(1)
+            
+            # Verificar si ya existe la orden base en el sistema
+            df_check = conn.query(
+                "SELECT DISTINCT orden FROM registros WHERE orden LIKE :base LIMIT 1",
+                params={"base": f"{orden_base}%"},
+                ttl=0
+            )
+            
+            if not df_check.empty:
+                # Ya existe la orden base → ofrecer carga masiva
+                st.session_state.carga_masiva_trigger = {
+                    "orden_base": orden_base,
+                    "orden_actual": orden_buscada
+                }
+                return
+
     # Si NO existe en las listas → verificar duplicado en otro sector
     verificacion = verificar_orden_en_otro_sector(orden_buscada, sector_actual)
 
@@ -663,6 +686,89 @@ elif paso == 2:
              onclick="window.location.href='?'">cambiar</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ── CARGA MASIVA DE SUB-PIEZAS ────────────────────────────────────
+    if st.session_state.get("carga_masiva_trigger"):
+        _cm = st.session_state.carga_masiva_trigger
+        
+        st.markdown(f"""
+        <div style="background:#1e3a8a;border:2px solid #3b82f6;border-radius:12px;
+                    padding:16px;margin-bottom:20px;">
+            <div style="font-size:24px;text-align:center;margin-bottom:8px;">📦</div>
+            <div style="font-size:16px;font-weight:700;color:#93c5fd;text-align:center;margin-bottom:12px;">
+                CARGA MASIVA DE PIEZAS
+            </div>
+            <div style="font-size:14px;color:#bfdbfe;text-align:center;margin-bottom:16px;">
+                La orden <b>{_cm['orden_base']}</b> ya existe en el sistema.<br>
+                ¿Querés cargar varias piezas de esta orden de una vez?
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_cant, col_dest = st.columns(2)
+        with col_cant:
+            cantidad_piezas = st.number_input(
+                "¿Cuántas piezas en total?",
+                min_value=2, max_value=100, value=10, step=1,
+                key="cm_cantidad"
+            )
+        
+        with col_dest:
+            from config import SECTORES
+            destino_cm = st.selectbox(
+                "Destino",
+                options=[s for s in SECTORES if s != "Optimización"],
+                key="cm_destino"
+            )
+        
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("← Cancelar", use_container_width=True):
+                st.session_state.carga_masiva_trigger = None
+                st.rerun()
+        
+        with col_btn2:
+            if st.button("✅ CARGAR TODAS", use_container_width=True, type="primary"):
+                # Generar y guardar todas las sub-piezas
+                errores = []
+                creadas = 0
+                
+                for i in range(1, cantidad_piezas + 1):
+                    orden_subpieza = f"{_cm['orden_base']}-{i}"
+                    
+                    # Guardar cada sub-pieza
+                    if destino_cm in ["Corte", "Corte Laminado"]:
+                        estado = f"En Proceso en {destino_cm}"
+                    else:
+                        estado = f"Enviado a {destino_cm}"
+                    
+                    ok, err = guardar_registro(
+                        orden_subpieza, 0, "A",
+                        st.session_state.op_confirmado,
+                        estado
+                    )
+                    
+                    if ok:
+                        creadas += 1
+                        agregar_historial(orden_subpieza, estado)
+                    else:
+                        errores.append(f"{orden_subpieza}: {err}")
+                
+                st.session_state.carga_masiva_trigger = None
+                
+                if errores:
+                    st.warning(f"✅ Creadas {creadas} piezas. ⚠️ Errores: {len(errores)}")
+                    for e in errores[:5]:  # Mostrar solo primeros 5
+                        st.caption(e)
+                else:
+                    st.success(f"✅ {creadas} piezas creadas correctamente en {destino_cm}!")
+                
+                st.session_state.ord_n += creadas
+                import time
+                time.sleep(2)
+                st.rerun()
+        
+        st.stop()
 
     # ── ADVERTENCIA DE DUPLICADO ─────────────────────────────────────────────
     if st.session_state.get("mostrar_advertencia_duplicado", False):
