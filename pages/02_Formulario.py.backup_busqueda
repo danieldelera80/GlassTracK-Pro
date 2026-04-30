@@ -347,7 +347,7 @@ _DEFAULTS = {
     "batch_desp_show":              False,
     "mostrar_advertencia_duplicado": False,
     "orden_duplicada":               None,
-    "pieza_inexistente": None,
+    "modal_modo": None,
     "orden_nueva_trigger": None,
     "orden_existe_trigger": None,
 }
@@ -435,50 +435,17 @@ def procesar_orden(valor):
             st.session_state.paso = 3
             return
     
-    # Verificar si la ORDEN BASE existe en cualquier sector
+    # Verificar si la ORDEN BASE existe en cualquier sector (incluido el actual)
     import re
-    # Mantener el código escaneado COMPLETO como base de la orden
-    # 65455 → base = 65455 → piezas: 65455-1, 65455-2, etc
-    # 65455-1 → base = 65455-1 → piezas: 65455-1-1, 65455-1-2, etc
-    orden_base = orden_normalizada
+    match = re.match(r'^(.+?)(?:-(\d+))?$', orden_normalizada)
+    orden_base = match.group(1) if match else orden_normalizada
     
-    # Query mejorado: solo trae el ESTADO ACTUAL de cada pieza (último registro)
-    # y hace match EXACTO de la orden base (no captura 648470 cuando buscas 64847)
     df_existencias = conn.query(
-        """
-        WITH ultimo_estado AS (
-            SELECT DISTINCT ON (TRIM(orden)) 
-                TRIM(orden) as orden, 
-                TRIM(sector) as sector,
-                carro,
-                TRIM(lado) as lado,
-                fecha_hora
-            FROM registros
-            WHERE sector != 'Consolidada en DVH'
-            ORDER BY TRIM(orden), fecha_hora DESC
-        )
-        SELECT orden, sector, carro, lado FROM ultimo_estado
-        WHERE (
-            orden = :exacto
-            OR orden ~ :patron_pieza
-            OR orden = :urg_exacto
-            OR orden ~ :urg_pieza
-            OR orden = :inc_exacto
-            OR orden ~ :inc_pieza
-        )
-        AND sector NOT LIKE 'Terminado%'
-        AND sector NOT LIKE 'Entrega%'
-        AND sector != 'Dañado'
-        ORDER BY fecha_hora DESC
-        """,
-        params={
-            "exacto": orden_base,
-            "patron_pieza": f"^{re.escape(orden_base)}-[0-9]+$",
-            "urg_exacto": f"[URGENTE] {orden_base}",
-            "urg_pieza": f"^\\[URGENTE\\] {re.escape(orden_base)}-[0-9]+$",
-            "inc_exacto": f"[INCIDENCIA] {orden_base}",
-            "inc_pieza": f"^\\[INCIDENCIA\\] {re.escape(orden_base)}-[0-9]+$"
-        },
+        "SELECT orden, sector FROM registros "
+        "WHERE TRIM(orden) LIKE :base_pattern "
+        "AND sector != 'Consolidada en DVH' "
+        "ORDER BY fecha_hora DESC",
+        params={"base_pattern": f"{orden_base}%"},
         ttl=0
     )
     
@@ -500,84 +467,16 @@ def procesar_orden(valor):
         sector_origen = df_existencias.iloc[0]["sector"].strip()
         orden_ejemplo = df_existencias.iloc[0]["orden"]
         
-        piezas_lista = []
-        for _, row in df_existencias.iterrows():
-            piezas_lista.append({
-                "orden": row["orden"],
-                "sector": row["sector"].strip(),
-                "carro": row.get("carro", 0),
-                "lado": row.get("lado", "A")
-            })
-        
         st.session_state.orden_existe_trigger = {
             "orden_base": orden_base,
             "orden_ejemplo": orden_ejemplo,
             "sector_origen": sector_origen,
             "ultimo_numero": ultimo_numero,
             "total_piezas": len(df_existencias["orden"].unique()),
-            "orden_escaneada": orden_buscada,
-            "piezas": piezas_lista
+            "orden_escaneada": orden_buscada
         }
         return
     
-    # ═══════════════════════════════════════════════════════════════
-    # ORDEN NUEVA → Validar si es una pieza inexistente de orden existente
-    # ═══════════════════════════════════════════════════════════════
-    match_pieza = re.match(r'^(.+)-(\d+)$', orden_normalizada)
-    if match_pieza:
-        orden_base_real = match_pieza.group(1)
-        df_base = conn.query(
-            """
-            WITH ultimo_estado AS (
-                SELECT DISTINCT ON (TRIM(orden)) 
-                    TRIM(orden) as orden, 
-                    TRIM(sector) as sector,
-                    fecha_hora
-                FROM registros
-                WHERE sector != 'Consolidada en DVH'
-                ORDER BY TRIM(orden), fecha_hora DESC
-            )
-            SELECT orden FROM ultimo_estado
-            WHERE (
-                orden = :exacto
-                OR orden ~ :patron_pieza
-                OR orden = :urg_exacto
-                OR orden ~ :urg_pieza
-                OR orden = :inc_exacto
-                OR orden ~ :inc_pieza
-            )
-            AND sector NOT LIKE 'Terminado%'
-            AND sector NOT LIKE 'Entrega%'
-            AND sector != 'Dañado'
-            ORDER BY fecha_hora DESC
-            """,
-            params={
-                "exacto": orden_base_real,
-                "patron_pieza": f"^{re.escape(orden_base_real)}-[0-9]+$",
-                "urg_exacto": f"[URGENTE] {orden_base_real}",
-                "urg_pieza": f"^\\[URGENTE\\] {re.escape(orden_base_real)}-[0-9]+$",
-                "inc_exacto": f"[INCIDENCIA] {orden_base_real}",
-                "inc_pieza": f"^\\[INCIDENCIA\\] {re.escape(orden_base_real)}-[0-9]+$"
-            },
-            ttl=0
-        )
-        if not df_base.empty:
-            nums_existentes = []
-            for ord_str in df_base["orden"].unique():
-                ord_clean = _PFX_RE.sub("", str(ord_str)).strip()
-                m_num = re.match(rf'^{re.escape(orden_base_real)}-(\d+)$', ord_clean)
-                if m_num:
-                    nums_existentes.append(m_num.group(1))
-                elif ord_clean == orden_base_real:
-                    nums_existentes.append("Base")
-            
-            st.session_state.pieza_inexistente = {
-                "escaneada": orden_buscada,
-                "orden_base": orden_base_real,
-                "piezas_que_si_existen": nums_existentes
-            }
-            return
-
     # ═══════════════════════════════════════════════════════════════
     # ORDEN NUEVA → preguntar cuántas piezas tiene
     # ═══════════════════════════════════════════════════════════════
@@ -809,17 +708,6 @@ elif paso == 2:
     """, unsafe_allow_html=True)
 
     # ════════════════════════════════════════════════════════════════════
-    # PIEZA INEXISTENTE (Validación previa a Orden Nueva)
-    # ════════════════════════════════════════════════════════════════════
-    if st.session_state.get("pieza_inexistente"):
-        _pi = st.session_state.pieza_inexistente
-        st.error(f"❌ La pieza **{_pi['escaneada']}** no existe. La orden **{_pi['orden_base']}** tiene estas piezas: {', '.join(_pi['piezas_que_si_existen'])}")
-        if st.button("OK", key="btn_ok_inexistente"):
-            st.session_state.pieza_inexistente = None
-            st.rerun()
-        st.stop()
-
-    # ════════════════════════════════════════════════════════════════════
     # MODAL: ORDEN NUEVA (preguntar cuántas piezas tiene)
     # ════════════════════════════════════════════════════════════════════
     if st.session_state.get("orden_nueva_trigger"):
@@ -864,23 +752,6 @@ elif paso == 2:
                 destino_nueva = st.session_state.sector_confirmado
                 st.info(f"📍 Destino: **{destino_nueva}**")
         
-        # DVH option solo para Optimización - misma lógica que paso 4
-        if st.session_state.sector_confirmado == "Optimización":
-            es_dvh_nueva = st.checkbox("🪟 Esta orden es parte de un DVH", key="modal_nueva_es_dvh")
-            if es_dvh_nueva:
-                if cantidad_total == 1:
-                    cara_dvh_nueva = st.radio(
-                        "Cara", [1, 2], horizontal=True, key="modal_nueva_cara_dvh"
-                    )
-                else:
-                    st.info("🪟 Caras alternadas: pieza-1 = cara 1, pieza-2 = cara 2, pieza-3 = cara 1, ...")
-                    cara_dvh_nueva = None  # señal: alternar automáticamente en el loop
-            else:
-                cara_dvh_nueva = None
-        else:
-            es_dvh_nueva = False
-            cara_dvh_nueva = None
-
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("← Cancelar", use_container_width=True, key="btn_cancel_nueva"):
@@ -909,14 +780,6 @@ elif paso == 2:
                     if ok:
                         creadas += 1
                         agregar_historial(orden_pieza, estado)
-
-                        # Marcar DVH si se eligió
-                        if es_dvh_nueva:
-                            cara_a_marcar = cara_dvh_nueva if cara_dvh_nueva is not None else (1 if i % 2 == 1 else 2)
-                            try:
-                                marcar_dvh(orden_pieza, cara_a_marcar, st.session_state.op_confirmado, "Optimización")
-                            except Exception as _e_dvh:
-                                errores.append(f"{orden_pieza}: DVH no marcado ({_e_dvh})")
                     else:
                         errores.append(f"{orden_pieza}: {err}")
                 
@@ -940,6 +803,9 @@ elif paso == 2:
     if st.session_state.get("orden_existe_trigger"):
         _oe = st.session_state.orden_existe_trigger
         
+        if "modal_modo" not in st.session_state:
+            st.session_state.modal_modo = None
+        
         st.markdown(f"""
         <div style="background:#1e3a8a;border:2px solid #3b82f6;border-radius:12px;
                     padding:16px;margin-bottom:20px;">
@@ -948,70 +814,128 @@ elif paso == 2:
                 ORDEN YA EXISTE
             </div>
             <div style="font-size:14px;color:#bfdbfe;text-align:center;line-height:1.6;">
-                Orden <b>{_oe['orden_base']}</b> — <b>{_oe['total_piezas']} pieza(s) existente(s)</b>
+                Orden <b>{_oe['orden_base']}</b> ya tiene <b>{_oe['total_piezas']} pieza(s)</b><br>
+                Última en: <b>{_oe['sector_origen']}</b>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        st.write("Seleccioná las piezas que querés traer a tu sector:")
-        
-        piezas_seleccionadas = []
-        for p in _oe["piezas"]:
-            en_mi_sector = p['sector'] in [f"En Proceso en {st.session_state.sector_confirmado}", f"Enviado a {st.session_state.sector_confirmado}"]
-            col_chk, col_info = st.columns([1, 4])
-            with col_chk:
-                if en_mi_sector:
-                    st.checkbox("", value=False, disabled=True, key=f"chk_dis_{p['orden']}")
-                else:
-                    if st.checkbox("", value=False, key=f"chk_existe_{p['orden']}"):
-                        piezas_seleccionadas.append(p)
-            with col_info:
-                st.markdown(f"**{p['orden']}**")
-                if en_mi_sector:
-                    st.caption("Ya está en tu sector")
-                else:
-                    st.caption(f"📍 {p['sector']} | 🛒 C:{p['carro']} L:{p['lado']}")
-        
-        st.write("")
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.button("← Cancelar", use_container_width=True, key="btn_cancel_existe"):
-                st.session_state.orden_existe_trigger = None
-                st.rerun()
-        
-        with col_btn2:
-            if st.button(f"↘️ TRAER SELECCIONADAS A {st.session_state.sector_confirmado}", use_container_width=True, type="primary", key="btn_traer_multi"):
-                if not piezas_seleccionadas:
-                    st.warning("No seleccionaste ninguna pieza.")
-                else:
-                    creadas = 0
-                    errores = []
-                    for p in piezas_seleccionadas:
-                        ok, err = guardar_registro(
-                            p['orden'], p['carro'], p['lado'] or "A",
-                            st.session_state.op_confirmado,
-                            f"En Proceso en {st.session_state.sector_confirmado}"
-                        )
-                        if ok:
-                            creadas += 1
-                            agregar_historial(p['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                        else:
-                            errores.append(f"{p['orden']}: {err}")
-                    
-                    st.session_state.orden_existe_trigger = None
-                    if creadas > 0:
+        # Si NO se eligió modo aún, mostrar opciones principales
+        if st.session_state.modal_modo is None:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("➡️ TRAER A MI SECTOR\n(es la misma)", use_container_width=True, type="primary", key="btn_traer"):
+                    carro_p, lado_p = obtener_carro_lado(_oe['orden_ejemplo'])
+                    ok, err = guardar_registro(
+                        _oe['orden_ejemplo'], carro_p, lado_p or "A",
+                        st.session_state.op_confirmado,
+                        f"En Proceso en {st.session_state.sector_confirmado}"
+                    )
+                    if ok:
+                        agregar_historial(_oe['orden_ejemplo'], f"En Proceso en {st.session_state.sector_confirmado}")
                         st.session_state.ultimo = {
-                            "orden": piezas_seleccionadas[-1]['orden'],
+                            "orden": _oe['orden_ejemplo'],
                             "sector": st.session_state.sector_confirmado,
                             "op": st.session_state.op_confirmado,
-                            "offline": False
+                            "offline": err == "OFFLINE"
                         }
+                        st.session_state.orden_existe_trigger = None
+                        st.session_state.modal_modo = None
+                        st.session_state.ord_n += 1
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error: {err}")
+            
+            with col_b:
+                if st.button("➕ AGREGAR PIEZAS\n(es otra pieza)", use_container_width=True, type="secondary", key="btn_agregar"):
+                    st.session_state.modal_modo = "agregar"
+                    st.rerun()
+            
+            st.write("")
+            if st.button("← Cancelar", use_container_width=True, key="btn_cancel_existe"):
+                st.session_state.orden_existe_trigger = None
+                st.session_state.modal_modo = None
+                st.rerun()
+        
+        # Modo "agregar" piezas
+        elif st.session_state.modal_modo == "agregar":
+            st.markdown(f"""
+            <div style="background:#0d2a1a;border:1px solid #1a6a35;border-radius:8px;
+                        padding:12px;margin-bottom:12px;font-size:13px;color:#a7f3d0;text-align:center;">
+                Próxima pieza será: <b>{_oe['orden_base']}-{_oe['ultimo_numero'] + 1}</b>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col_cant, col_dest = st.columns(2)
+            with col_cant:
+                cantidad_agregar = st.number_input(
+                    "¿Cuántas piezas agregar?",
+                    min_value=1, max_value=100, value=1, step=1,
+                    key="modal_agregar_cantidad"
+                )
+                
+                _desde = _oe['ultimo_numero'] + 1
+                _hasta = _oe['ultimo_numero'] + cantidad_agregar
+                if cantidad_agregar == 1:
+                    st.info(f"Se creará: **{_oe['orden_base']}-{_desde}**")
+                else:
+                    st.info(f"Se crearán: **{_oe['orden_base']}-{_desde}** hasta **{_oe['orden_base']}-{_hasta}**")
+            
+            with col_dest:
+                from config import SECTORES
+                if st.session_state.sector_confirmado == "Optimización":
+                    destino_agregar = st.selectbox(
+                        "Destino",
+                        options=[s for s in SECTORES if s != "Optimización"],
+                        key="modal_agregar_destino"
+                    )
+                else:
+                    destino_agregar = st.session_state.sector_confirmado
+                    st.info(f"📍 Destino: **{destino_agregar}**")
+            
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("← Volver", use_container_width=True, key="btn_volver_agregar"):
+                    st.session_state.modal_modo = None
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button(f"✅ AGREGAR {cantidad_agregar} pieza(s)", use_container_width=True, type="primary", key="btn_confirmar_agregar"):
+                    creadas = 0
+                    errores = []
+                    
+                    for i in range(1, cantidad_agregar + 1):
+                        nuevo_num = _oe['ultimo_numero'] + i
+                        orden_nueva = f"{_oe['orden_base']}-{nuevo_num}"
+                        
+                        if destino_agregar in ["Corte", "Corte Laminado"]:
+                            estado = f"En Proceso en {destino_agregar}"
+                        else:
+                            estado = f"Enviado a {destino_agregar}"
+                        
+                        ok, err = guardar_registro(
+                            orden_nueva, 0, "A",
+                            st.session_state.op_confirmado,
+                            estado
+                        )
+                        
+                        if ok:
+                            creadas += 1
+                            agregar_historial(orden_nueva, estado)
+                        else:
+                            errores.append(f"{orden_nueva}: {err}")
+                    
+                    st.session_state.orden_existe_trigger = None
+                    st.session_state.modal_modo = None
+                    
+                    if errores:
+                        st.warning(f"✅ {creadas} creadas. ⚠️ {len(errores)} errores")
+                    else:
+                        st.success(f"✅ {creadas} pieza(s) agregada(s) en {destino_agregar}!")
                     
                     st.session_state.ord_n += creadas
-                    if errores:
-                        st.warning(f"✅ {creadas} tomadas. ⚠️ {len(errores)} errores")
-                        import time
-                        time.sleep(2)
+                    import time
+                    time.sleep(1.5)
                     st.rerun()
         
         st.stop()
@@ -1210,28 +1134,13 @@ elif paso == 2:
                     else:
                         _pares_e = {}
     
-                    # ── Selección múltiple (grupo o individual) ───────────────────
-                    _sel_pend = {}
-                    for _m, _pzs in _visible_e:
-                        # Buscar piezas individuales marcadas
-                        _piezas_indiv = [p for p in _pzs if st.session_state.get(f"chk_pend_pieza_{p['orden']}", False)]
-                        
-                        if _piezas_indiv:
-                            # Si hay individuales marcadas, usar SOLO esas (prioridad)
-                            _sel_pend[_m] = _piezas_indiv
-                        elif st.session_state.get(f"chk_pend_{_m}", False):
-                            # Si no hay individuales pero el grupo está marcado, usar todas
-                            _sel_pend[_m] = _pzs
-                    
+                    # ── Selección múltiple ─────────────────────────────────────────
+                    _sel_pend = {_m: _pzs for _m, _pzs in _visible_e if st.session_state.get(f"chk_pend_{_m}", False)}
                     _n_sel_pend = len(_sel_pend)
-                    _total_piezas_pend = sum(len(piezas) for piezas in _sel_pend.values())
-                    
                     if _n_sel_pend > 0:
-                        st.info(f"☑️ {_total_piezas_pend} pieza(s) seleccionada(s)")
-                    
-                    # Mostrar botón si hay 2+ checkboxes O 2+ piezas totales
-                    if _n_sel_pend >= 2 or _total_piezas_pend >= 2:
-                        if st.button(f"↘️ TOMAR SELECCIONADAS ({_total_piezas_pend} piezas)", type="primary",
+                        st.info(f"☑️ {_n_sel_pend} seleccionada{'s' if _n_sel_pend != 1 else ''}")
+                    if _n_sel_pend >= 2:
+                        if st.button(f"↘️ TOMAR SELECCIONADAS ({_n_sel_pend})", type="primary",
                                      use_container_width=True, key="btn_batch_tomar"):
                             _tomadas_b, _errores_tb = 0, []
                             for _bm, _bpzs in _sel_pend.items():
@@ -1296,33 +1205,28 @@ elif paso == 2:
                                 with st.expander("ver piezas", expanded=False):
                                     for row in _piezas_e:
                                         _di_e = _dvh_bulk_e.get(row['orden'])
-                                        # Checkbox individual + tarjeta
-                                        _col_chk_indiv, _col_card_indiv = st.columns([0.06, 0.94])
-                                        with _col_chk_indiv:
-                                            st.checkbox("", key=f"chk_pend_pieza_{row['orden']}", label_visibility="collapsed")
-                                        with _col_card_indiv:
-                                            if render_tarjeta_orden(
-                                                row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
-                                                estado="pendiente", dentro_de_grupo=True,
-                                                dvh_cara=_di_e["cara"] if _di_e else None
-                                            ):
-                                                ok, err = guardar_registro(
-                                                    row['orden'], row.get('carro', 0), row.get('lado', '-'),
-                                                    st.session_state.op_confirmado,
-                                                    f"En Proceso en {st.session_state.sector_confirmado}"
-                                                )
-                                                if ok:
-                                                    agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
-                                                    st.session_state.ultimo = {
-                                                        "orden": row['orden'],
-                                                        "sector": f"En Proceso en {st.session_state.sector_confirmado}",
-                                                        "op": st.session_state.op_confirmado,
-                                                        "offline": err == "OFFLINE"
-                                                    }
-                                                    st.session_state.ord_n += 1
-                                                    st.rerun()
-                                                else:
-                                                    st.error(err)
+                                        if render_tarjeta_orden(
+                                            row, f"↘️ TOMAR — {row['orden']}", f"rec_{row['orden']}",
+                                            estado="pendiente", dentro_de_grupo=True,
+                                            dvh_cara=_di_e["cara"] if _di_e else None
+                                        ):
+                                            ok, err = guardar_registro(
+                                                row['orden'], row.get('carro', 0), row.get('lado', '-'),
+                                                st.session_state.op_confirmado,
+                                                f"En Proceso en {st.session_state.sector_confirmado}"
+                                            )
+                                            if ok:
+                                                agregar_historial(row['orden'], f"En Proceso en {st.session_state.sector_confirmado}")
+                                                st.session_state.ultimo = {
+                                                    "orden": row['orden'],
+                                                    "sector": f"En Proceso en {st.session_state.sector_confirmado}",
+                                                    "op": st.session_state.op_confirmado,
+                                                    "offline": err == "OFFLINE"
+                                                }
+                                                st.session_state.ord_n += 1
+                                                st.rerun()
+                                            else:
+                                                st.error(err)
                             else:
                                 row = _piezas_e[0]
                                 _di_e = _dvh_bulk_e.get(row['orden'])
@@ -1383,19 +1287,8 @@ elif paso == 2:
                 else:
                     _pares_p = {}
 
-                # ── Selección múltiple (grupo o individual) ───────────────────
-                _sel_proc = {}
-                for _m, _pzs in _visible_p:
-                    # Buscar piezas individuales marcadas
-                    _piezas_indiv_p = [p for p in _pzs if st.session_state.get(f"chk_proc_pieza_{p['orden']}", False)]
-                    
-                    if _piezas_indiv_p:
-                        # Si hay individuales marcadas, usar SOLO esas (prioridad)
-                        _sel_proc[_m] = _piezas_indiv_p
-                    elif st.session_state.get(f"chk_proc_{_m}", False):
-                        # Si no hay individuales pero el grupo está marcado, usar todas
-                        _sel_proc[_m] = _pzs
-                
+                # ── Selección múltiple ─────────────────────────────────────────
+                _sel_proc = {_m: _pzs for _m, _pzs in _visible_p if st.session_state.get(f"chk_proc_{_m}", False)}
                 _n_sel_proc = len(_sel_proc)
                 _total_piezas = sum(len(piezas) for piezas in _sel_proc.values())
                 
@@ -1560,22 +1453,17 @@ elif paso == 2:
                                 for row in _piezas_p:
                                     _di_p = _dvh_bulk_p.get(row['orden'])
                                     _meta_proc = f"&#x1F6D2; Carro {row['carro']} · Lado {row['lado']} · desde las {row['fecha_hora']}"
-                                    # Checkbox individual + tarjeta
-                                    _col_chk_indiv_p, _col_card_indiv_p = st.columns([0.06, 0.94])
-                                    with _col_chk_indiv_p:
-                                        st.checkbox("", key=f"chk_proc_pieza_{row['orden']}", label_visibility="collapsed")
-                                    with _col_card_indiv_p:
-                                        if render_tarjeta_orden(
-                                            row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
-                                            estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
-                                            dvh_cara=_di_p["cara"] if _di_p else None
-                                        ):
-                                            st.session_state.orden_val    = row['orden']
-                                            st.session_state.carro_previo = int(row.get('carro') or 0)
-                                            st.session_state.lado_previo  = str(row.get('lado') or 'A')
-                                            st.session_state.paso3_fresh  = True
-                                            st.session_state.paso         = 4
-                                            st.rerun()
+                                    if render_tarjeta_orden(
+                                        row, f"📤 DESPACHAR — {row['orden']}", f"fin_{row['orden']}",
+                                        estado="en_proceso", meta_texto=_meta_proc, dentro_de_grupo=True,
+                                        dvh_cara=_di_p["cara"] if _di_p else None
+                                    ):
+                                        st.session_state.orden_val    = row['orden']
+                                        st.session_state.carro_previo = int(row.get('carro') or 0)
+                                        st.session_state.lado_previo  = str(row.get('lado') or 'A')
+                                        st.session_state.paso3_fresh  = True
+                                        st.session_state.paso         = 4
+                                        st.rerun()
                         else:
                             row = _piezas_p[0]
                             _di_p = _dvh_bulk_p.get(row['orden'])
@@ -1686,16 +1574,6 @@ elif paso == 3:
         # ── BLOQUE EXCLUSIVO OPTIMIZACIÓN ────────────────────────────────────
         es_error = st.checkbox("Es orden de error", value=True, key="_t_es_error")
 
-        # DVH marking - mismo patrón que paso 4
-        _dvh_info_actual_t = obtener_dvh_info(_orden)
-        _es_dvh_actual_t   = _dvh_info_actual_t is not None
-        es_dvh_t = st.checkbox("🪟 Esta pieza es parte de un DVH", value=_es_dvh_actual_t, key="_t_es_dvh")
-        if es_dvh_t:
-            _cara_default_t = (_dvh_info_actual_t["cara"] - 1) if _es_dvh_actual_t else 0
-            cara_dvh_t = st.radio("Cara", [1, 2], index=_cara_default_t, horizontal=True, key="_t_cara_dvh")
-        else:
-            cara_dvh_t = None
-
         if not es_error:
             col_c, col_l = st.columns(2)
             with col_c:
@@ -1721,11 +1599,6 @@ elif paso == 3:
                 st.warning("⚠️ Ingresá el número de carro.")
             else:
                 carro_val = int(carro_str.strip()) if (carro_ok and carro_str.strip()) else (_cp if _cp > 0 else 0)
-                # Marcar / desmarcar DVH antes de guardar
-                if es_dvh_t and cara_dvh_t:
-                    marcar_dvh(_orden, cara_dvh_t, st.session_state.op_confirmado, "Optimización")
-                elif _es_dvh_actual_t and not es_dvh_t:
-                    desmarcar_dvh(_orden)
                 # Para Corte y Corte Laminado, las órdenes van directo a EN PROCESO (sin pasar por TOMAR)
                 if destino_opt in ["Corte", "Corte Laminado"]:
                     ok, err = guardar_registro(_orden, carro_val, lado,
