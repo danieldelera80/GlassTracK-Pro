@@ -159,7 +159,7 @@ def guardar_registro(orden, carro, lado, usuario, sector):
 
 def obtener_activos(sector_actual):
     try:
-        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' AND sector != 'Consolidada en DVH' ORDER BY fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty:
@@ -181,7 +181,7 @@ def obtener_activos(sector_actual):
 
 def obtener_pendientes_entrega():
     try:
-        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' AND sector != 'Consolidada en DVH' ORDER BY fecha_hora DESC"
+        query = "SELECT orden, carro, lado, sector, usuario, fecha_hora FROM registros WHERE fecha_hora >= NOW() - INTERVAL '30 days' ORDER BY fecha_hora DESC"
         with conn.session as s:
             df = pd.read_sql(text(query), s.connection())
         if df.empty:
@@ -244,7 +244,6 @@ def verificar_orden_en_otro_sector(orden_base, sector_actual):
         df = conn.query(
             "SELECT orden, sector FROM registros "
             "WHERE (TRIM(orden) LIKE :base_pattern OR TRIM(orden) LIKE :urg OR TRIM(orden) LIKE :inc) "
-            "  AND sector != 'Consolidada en DVH' "
             "ORDER BY fecha_hora DESC",
             params={
                 "base_pattern": f"{orden_sin_sufijo}%",
@@ -454,7 +453,6 @@ def procesar_orden(valor):
                 TRIM(lado) as lado,
                 fecha_hora
             FROM registros
-            WHERE sector != 'Consolidada en DVH'
             ORDER BY TRIM(orden), fecha_hora DESC
         )
         SELECT orden, sector, carro, lado FROM ultimo_estado
@@ -534,7 +532,6 @@ def procesar_orden(valor):
                     TRIM(sector) as sector,
                     fecha_hora
                 FROM registros
-                WHERE sector != 'Consolidada en DVH'
                 ORDER BY TRIM(orden), fecha_hora DESC
             )
             SELECT orden FROM ultimo_estado
