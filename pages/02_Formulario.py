@@ -1511,11 +1511,22 @@ elif paso == 2:
                             _b_carro_val = int(_b_carro_str.strip()) if _b_carro_ok else 0
                             _despachadas_b, _errores_db = 0, []
                             if _es_dvh_b:
-                                for _bm_dvh in list(_sel_proc.keys()):
+                                for _bm_dvh, _bpzs_dvh in _sel_proc.items():
                                     _par_b = _pares_p.get(_bm_dvh, {})
-                                    if _par_b.get("ambas_en_dvh", False):
-                                        _c1_b = _par_b["cara1"]
-                                        _c2_b = _par_b["cara2"]
+                                    
+                                    _ambas = _par_b.get("ambas_en_dvh", False)
+                                    _c1_b = _par_b.get("cara1")
+                                    _c2_b = _par_b.get("cara2")
+                                    
+                                    # Auto-asignación mágica si se seleccionan exactamente 2 piezas sin marcar
+                                    if len(_bpzs_dvh) == 2 and not _par_b.get("ambas_marcadas", False):
+                                        marcar_dvh(_bpzs_dvh[0]['orden'], 1, st.session_state.op_confirmado, "DVH")
+                                        marcar_dvh(_bpzs_dvh[1]['orden'], 2, st.session_state.op_confirmado, "DVH")
+                                        _c1_b = {"orden_pieza": _bpzs_dvh[0]['orden']}
+                                        _c2_b = {"orden_pieza": _bpzs_dvh[1]['orden']}
+                                        _ambas = True
+
+                                    if _ambas:
                                         try:
                                             _ts_b = _now_utc()
                                             _op_b = st.session_state.op_confirmado
