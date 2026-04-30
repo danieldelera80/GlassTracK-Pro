@@ -1641,6 +1641,16 @@ elif paso == 3:
         # ── BLOQUE EXCLUSIVO OPTIMIZACIÓN ────────────────────────────────────
         es_error = st.checkbox("Es orden de error", value=True, key="_t_es_error")
 
+        # DVH marking - mismo patrón que paso 4
+        _dvh_info_actual_t = obtener_dvh_info(_orden)
+        _es_dvh_actual_t   = _dvh_info_actual_t is not None
+        es_dvh_t = st.checkbox("🪟 Esta pieza es parte de un DVH", value=_es_dvh_actual_t, key="_t_es_dvh")
+        if es_dvh_t:
+            _cara_default_t = (_dvh_info_actual_t["cara"] - 1) if _es_dvh_actual_t else 0
+            cara_dvh_t = st.radio("Cara", [1, 2], index=_cara_default_t, horizontal=True, key="_t_cara_dvh")
+        else:
+            cara_dvh_t = None
+
         if not es_error:
             col_c, col_l = st.columns(2)
             with col_c:
@@ -1666,6 +1676,11 @@ elif paso == 3:
                 st.warning("⚠️ Ingresá el número de carro.")
             else:
                 carro_val = int(carro_str.strip()) if (carro_ok and carro_str.strip()) else (_cp if _cp > 0 else 0)
+                # Marcar / desmarcar DVH antes de guardar
+                if es_dvh_t and cara_dvh_t:
+                    marcar_dvh(_orden, cara_dvh_t, st.session_state.op_confirmado, "Optimización")
+                elif _es_dvh_actual_t and not es_dvh_t:
+                    desmarcar_dvh(_orden)
                 # Para Corte y Corte Laminado, las órdenes van directo a EN PROCESO (sin pasar por TOMAR)
                 if destino_opt in ["Corte", "Corte Laminado"]:
                     ok, err = guardar_registro(_orden, carro_val, lado,
