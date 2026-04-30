@@ -973,6 +973,75 @@ elif paso == 2:
                     st.caption(f"📍 {p['sector']} | 🛒 C:{p['carro']} L:{p['lado']}")
         
         st.write("")
+        
+        with st.expander("➕ ¿Faltan piezas en esta orden? Agregar nuevas"):
+            st.markdown(f"<div style='font-size:13px;color:#a7f3d0;margin-bottom:10px;'>La última pieza registrada de esta orden es: <b>{_oe['orden_base']}-{_oe['ultimo_numero']}</b></div>", unsafe_allow_html=True)
+            
+            col_cant_exp, col_dest_exp = st.columns(2)
+            with col_cant_exp:
+                cantidad_agregar = st.number_input(
+                    "¿Cuántas piezas nuevas agregar?",
+                    min_value=1, max_value=100, value=1, step=1,
+                    key="modal_agregar_cantidad_exp"
+                )
+                
+                _desde = _oe['ultimo_numero'] + 1
+                _hasta = _oe['ultimo_numero'] + cantidad_agregar
+                if cantidad_agregar == 1:
+                    st.info(f"Se creará: **{_oe['orden_base']}-{_desde}**")
+                else:
+                    st.info(f"Se crearán: **{_oe['orden_base']}-{_desde}** hasta **{_oe['orden_base']}-{_hasta}**")
+            
+            with col_dest_exp:
+                from config import SECTORES
+                if st.session_state.sector_confirmado == "Optimización":
+                    destino_agregar = st.selectbox(
+                        "Destino",
+                        options=[s for s in SECTORES if s != "Optimización"],
+                        key="modal_agregar_destino_exp"
+                    )
+                else:
+                    destino_agregar = st.session_state.sector_confirmado
+                    st.info(f"📍 Destino: **{destino_agregar}**")
+                    
+            if st.button(f"✅ CREAR {cantidad_agregar} PIEZA(S)", use_container_width=True, type="secondary", key="btn_confirmar_agregar_exp"):
+                creadas = 0
+                errores = []
+                
+                for i in range(1, cantidad_agregar + 1):
+                    nuevo_num = _oe['ultimo_numero'] + i
+                    orden_nueva = f"{_oe['orden_base']}-{nuevo_num}"
+                    
+                    if destino_agregar in ["Corte", "Corte Laminado"]:
+                        estado = f"En Proceso en {destino_agregar}"
+                    else:
+                        estado = f"Enviado a {destino_agregar}"
+                    
+                    ok, err = guardar_registro(
+                        orden_nueva, 0, "A",
+                        st.session_state.op_confirmado,
+                        estado
+                    )
+                    
+                    if ok:
+                        creadas += 1
+                        agregar_historial(orden_nueva, estado)
+                    else:
+                        errores.append(f"{orden_nueva}: {err}")
+                
+                st.session_state.orden_existe_trigger = None
+                
+                if errores:
+                    st.warning(f"✅ {creadas} creadas. ⚠️ {len(errores)} errores")
+                else:
+                    st.success(f"✅ {creadas} pieza(s) agregada(s) en {destino_agregar}!")
+                
+                st.session_state.ord_n += creadas
+                import time
+                time.sleep(1.5)
+                st.rerun()
+
+        st.write("")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("← Cancelar", use_container_width=True, key="btn_cancel_existe"):
