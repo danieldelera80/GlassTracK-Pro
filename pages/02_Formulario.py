@@ -1529,9 +1529,9 @@ elif paso == 2:
                                                 _sb.execute(text("""
                                                     INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
                                                     VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
-                                                """), {"f": _ts_b, "o": _bm_dvh, "c": _b_carro_val, "l": _b_lado, "u": _op_b})
+                                                """), {"f": _ts_b, "o": f"{_bm_dvh}-DVH", "c": _b_carro_val, "l": _b_lado, "u": _op_b})
                                                 _sb.commit()
-                                            agregar_historial(_bm_dvh, "DVH", enviado_a="Terminado (DVH)")
+                                            agregar_historial(f"{_bm_dvh}-DVH", "DVH", enviado_a="Terminado (DVH)")
                                             _despachadas_b += 1
                                         except Exception as _exc_dvh:
                                             _errores_db.append(_bm_dvh)
@@ -1996,11 +1996,11 @@ elif paso == 4:
                                 _s.execute(text("""
                                     INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
                                     VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
-                                """), {"f": _ts, "o": _maestra_s, "c": carro, "l": lado, "u": _op})
+                                """), {"f": _ts, "o": f"{_maestra_s}-DVH", "c": carro, "l": lado, "u": _op})
                                 _s.commit()
-                            agregar_historial(_orden, "DVH", enviado_a="Terminado (DVH)")
+                            agregar_historial(f"{_maestra_s}-DVH", "DVH", enviado_a="Terminado (DVH)")
                             st.session_state.ultimo = {
-                                "orden": _maestra_s, "sector": "DVH",
+                                "orden": f"{_maestra_s}-DVH", "sector": "DVH",
                                 "op": _op, "enviado_a": "Terminado", "offline": False
                             }
                             st.session_state.orden_val = ""
@@ -2053,7 +2053,7 @@ elif paso == 4:
                 _maestra  = _info_dvh["maestra"]
                 _cara1    = _par["cara1"]
                 _cara2    = _par["cara2"]
-                st.success(f"✅ Pareja DVH completa — se consolidará la orden {_maestra}")
+                st.success(f"✅ Pareja DVH completa — se consolidará la orden {_maestra}-DVH")
                 st.markdown(f"""
 - **Cara 1** ({_cara1['orden_pieza']}): ✅ Aqui en DVH
 - **Cara 2** ({_cara2['orden_pieza']}): ✅ Aqui en DVH
@@ -2077,11 +2077,11 @@ elif paso == 4:
                                 _s.execute(text("""
                                     INSERT INTO registros (fecha_hora, orden, carro, lado, usuario, sector)
                                     VALUES (:f, :o, :c, :l, :u, 'Enviado a Terminado')
-                                """), {"f": _ts, "o": _maestra, "c": carro, "l": lado, "u": _op})
+                                """), {"f": _ts, "o": f"{_maestra}-DVH", "c": carro, "l": lado, "u": _op})
                                 _s.commit()
-                            agregar_historial(_orden, "DVH", enviado_a="Terminado (DVH consolidado)")
+                            agregar_historial(f"{_maestra}-DVH", "DVH", enviado_a="Terminado (DVH consolidado)")
                             st.session_state.ultimo = {
-                                "orden": _maestra, "sector": "DVH",
+                                "orden": f"{_maestra}-DVH", "sector": "DVH",
                                 "op": _op, "enviado_a": "Terminado", "offline": False
                             }
                             st.session_state.orden_val = ""
