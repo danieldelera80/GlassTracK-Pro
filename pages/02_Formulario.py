@@ -783,6 +783,23 @@ elif paso == 2:
                 destino_nueva = st.session_state.sector_confirmado
                 st.info(f"📍 Destino: **{destino_nueva}**")
         
+        # DVH option solo para Optimización - misma lógica que paso 4
+        if st.session_state.sector_confirmado == "Optimización":
+            es_dvh_nueva = st.checkbox("🪟 Esta orden es parte de un DVH", key="modal_nueva_es_dvh")
+            if es_dvh_nueva:
+                if cantidad_total == 1:
+                    cara_dvh_nueva = st.radio(
+                        "Cara", [1, 2], horizontal=True, key="modal_nueva_cara_dvh"
+                    )
+                else:
+                    st.info("🪟 Caras alternadas: pieza-1 = cara 1, pieza-2 = cara 2, pieza-3 = cara 1, ...")
+                    cara_dvh_nueva = None  # señal: alternar automáticamente en el loop
+            else:
+                cara_dvh_nueva = None
+        else:
+            es_dvh_nueva = False
+            cara_dvh_nueva = None
+
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("← Cancelar", use_container_width=True, key="btn_cancel_nueva"):
@@ -811,6 +828,14 @@ elif paso == 2:
                     if ok:
                         creadas += 1
                         agregar_historial(orden_pieza, estado)
+
+                        # Marcar DVH si se eligió
+                        if es_dvh_nueva:
+                            cara_a_marcar = cara_dvh_nueva if cara_dvh_nueva is not None else (1 if i % 2 == 1 else 2)
+                            try:
+                                marcar_dvh(orden_pieza, cara_a_marcar, st.session_state.op_confirmado, "Optimización")
+                            except Exception as _e_dvh:
+                                errores.append(f"{orden_pieza}: DVH no marcado ({_e_dvh})")
                     else:
                         errores.append(f"{orden_pieza}: {err}")
                 
