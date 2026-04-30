@@ -1648,6 +1648,18 @@ elif paso == 2:
                                             st.session_state.paso3_fresh  = True
                                             st.session_state.paso         = 4
                                             st.rerun()
+                                            
+                                        # Botones rápidos DVH
+                                        if st.session_state.sector_confirmado == "DVH" and not _di_p:
+                                            _qk_c1, _qk_c2 = st.columns(2)
+                                            with _qk_c1:
+                                                if st.button("🪟 Marcar Cara 1", key=f"qkc1_{row['orden']}", use_container_width=True):
+                                                    marcar_dvh(row['orden'], 1, st.session_state.op_confirmado, "DVH")
+                                                    st.rerun()
+                                            with _qk_c2:
+                                                if st.button("🪟 Marcar Cara 2", key=f"qkc2_{row['orden']}", use_container_width=True):
+                                                    marcar_dvh(row['orden'], 2, st.session_state.op_confirmado, "DVH")
+                                                    st.rerun()
                         else:
                             row = _piezas_p[0]
                             _di_p = _dvh_bulk_p.get(row['orden'])
@@ -1663,6 +1675,18 @@ elif paso == 2:
                                 st.session_state.paso3_fresh  = True
                                 st.session_state.paso         = 4
                                 st.rerun()
+                                
+                            # Botones rápidos DVH
+                            if st.session_state.sector_confirmado == "DVH" and not _di_p:
+                                _qk_c1, _qk_c2 = st.columns(2)
+                                with _qk_c1:
+                                    if st.button("🪟 Marcar Cara 1", key=f"qks1_{row['orden']}", use_container_width=True):
+                                        marcar_dvh(row['orden'], 1, st.session_state.op_confirmado, "DVH")
+                                        st.rerun()
+                                with _qk_c2:
+                                    if st.button("🪟 Marcar Cara 2", key=f"qks2_{row['orden']}", use_container_width=True):
+                                        marcar_dvh(row['orden'], 2, st.session_state.op_confirmado, "DVH")
+                                        st.rerun()
                 _resto_p = len(_glist_p) - _lim_p
                 if _resto_p > 0:
                     if st.button(f"Mostrar más ({_resto_p} restantes)", key=f"mas_proc_{_sk}"):
