@@ -1534,9 +1534,12 @@ elif paso == 2:
                                             agregar_historial(f"{_bm_dvh}-DVH", "DVH", enviado_a="Terminado (DVH)")
                                             _despachadas_b += 1
                                         except Exception as _exc_dvh:
-                                            _errores_db.append(_bm_dvh)
+                                            _errores_db.append(f"{_bm_dvh} (BD_Err: {str(_exc_dvh)})")
                                     else:
-                                        _errores_db.append(_bm_dvh)
+                                        _motivo = "No ambas en DVH"
+                                        if not _par_b.get("ambas_marcadas", False):
+                                            _motivo = "Falta marcar cara 1 o 2"
+                                        _errores_db.append(f"{_bm_dvh} ({_motivo})")
                             else:
                                 for _bm_n, _bpzs_n in _sel_proc.items():
                                     for _brow_n in _bpzs_n:
